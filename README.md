@@ -1,65 +1,56 @@
-# Save Your Money
+# Welcome to your Expo app 👋
 
-Save Your Money is a planned offline-first Android budget tracker built around an editable Needs/Wants/Savings percentage budget.
+This is an [Expo](https://expo.dev) project created with [`create-expo-app`](https://www.npmjs.com/package/create-expo-app).
 
-The project is currently in the approved planning phase. Application scaffolding and implementation have not started.
+## Get started
 
-## Product constraints
+1. Install dependencies
 
-- Single user and single device in v1.
-- Android 13 on a Realme 8i is the initial target.
-- Fully usable offline with no application account or backend.
-- Expo Go for normal development and signed EAS APKs for native/release testing.
-- No Android Studio or emulator in the approved workflow.
-- SQLite is the source of truth; encrypted external backups provide portable recovery.
+   ```bash
+   npm install
+   ```
 
-## Documents
+2. Start the app
 
-- [Product and engineering plan](PROJECT_PLAN.md)
-- [Release and recovery checklist](RELEASE_RECOVERY_CHECKLIST.md)
+   ```bash
+   npx expo start
+   ```
 
-## Planned stack
+In the output, you'll find options to open the app in a
 
-- Expo and React Native
-- Strict TypeScript
-- Expo Router
-- Expo SQLite
-- Expo Notifications
-- Expo FileSystem and DocumentPicker
-- Expo Crypto
-- npm and Git
+- [development build](https://docs.expo.dev/develop/development-builds/introduction/)
+- [Android emulator](https://docs.expo.dev/workflow/android-studio-emulator/)
+- [iOS simulator](https://docs.expo.dev/workflow/ios-simulator/)
+- [Expo Go](https://expo.dev/go), a limited sandbox for trying out app development with Expo
 
-## Planned milestone order
+You can start developing by editing the files inside the **app** directory. This project uses [file-based routing](https://docs.expo.dev/router/introduction).
 
-1. Foundation
-2. Financial domain
-3. Storage and migrations
-4. Setup, accounts, and categories
-5. Transactions
-6. Monthly budgeting
-7. Dashboard
-8. Month closing, history, and reports
-9. Recurring reminders
-10. Backup, restore, and CSV export
-11. Hardening and signed release
+## Get a fresh project
 
-Each milestone has a mandatory exit gate in `PROJECT_PLAN.md`.
-
-## Commands
-
-Commands will be added and verified during the foundation milestone. The intended interface is:
+When you're ready, run:
 
 ```bash
-npm install
-npm start
-npm run typecheck
-npm run lint
-npm test
+npm run reset-project
 ```
 
-Do not treat these as operational until the Expo project and package scripts have been created.
+This command will move the starter code to the **app-example** directory and create a blank **app** directory where you can start developing.
 
-## Current next step
+### Other setup steps
 
-Begin M0 only after explicitly authorizing implementation. M0 initializes Git, scaffolds the Expo TypeScript application, establishes automated checks, and verifies the QR-code workflow on the physical phone.
+- To set up ESLint for linting, run `npx expo lint`, or follow our guide on ["Using ESLint and Prettier"](https://docs.expo.dev/guides/using-eslint/)
+- If you'd like to set up unit testing, follow our guide on ["Unit Testing with Jest"](https://docs.expo.dev/develop/unit-testing/)
+- Learn more about the TypeScript setup in this template in our guide on ["Using TypeScript"](https://docs.expo.dev/guides/typescript/)
 
+## Learn more
+
+To learn more about developing your project with Expo, look at the following resources:
+
+- [Expo documentation](https://docs.expo.dev/): Learn fundamentals, or go into advanced topics with our [guides](https://docs.expo.dev/guides).
+- [Learn Expo tutorial](https://docs.expo.dev/tutorial/introduction/): Follow a step-by-step tutorial where you'll create a project that runs on Android, iOS, and the web.
+
+## Join the community
+
+Join our community of developers creating universal apps.
+
+- [Expo on GitHub](https://github.com/expo/expo): View our open source platform and contribute.
+- [Discord community](https://chat.expo.dev): Chat with Expo users and ask questions.

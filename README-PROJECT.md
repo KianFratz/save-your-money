@@ -1,0 +1,65 @@
+# Save Your Money
+
+Save Your Money is a planned offline-first Android budget tracker built around an editable Needs/Wants/Savings percentage budget.
+
+The project is currently in the approved planning phase. Application scaffolding and implementation have not started.
+
+## Product constraints
+
+- Single user and single device in v1.
+- Android 13 on a Realme 8i is the initial target.
+- Fully usable offline with no application account or backend.
+- Expo Go for normal development and signed EAS APKs for native/release testing.
+- No Android Studio or emulator in the approved workflow.
+- SQLite is the source of truth; encrypted external backups provide portable recovery.
+
+## Documents
+
+- [Product and engineering plan](PROJECT_PLAN.md)
+- [Release and recovery checklist](RELEASE_RECOVERY_CHECKLIST.md)
+
+## Planned stack
+
+- Expo and React Native
+- Strict TypeScript
+- Expo Router
+- Expo SQLite
+- Expo Notifications
+- Expo FileSystem and DocumentPicker
+- Expo Crypto
+- npm and Git
+
+## Planned milestone order
+
+1. Foundation
+2. Financial domain
+3. Storage and migrations
+4. Setup, accounts, and categories
+5. Transactions
+6. Monthly budgeting
+7. Dashboard
+8. Month closing, history, and reports
+9. Recurring reminders
+10. Backup, restore, and CSV export
+11. Hardening and signed release
+
+Each milestone has a mandatory exit gate in `PROJECT_PLAN.md`.
+
+## Commands
+
+Commands will be added and verified during the foundation milestone. The intended interface is:
+
+```bash
+npm install
+npm start
+npm run typecheck
+npm run lint
+npm test
+```
+
+Do not treat these as operational until the Expo project and package scripts have been created.
+
+## Current next step
+
+Begin M0 only after explicitly authorizing implementation. M0 initializes Git, scaffolds the Expo TypeScript application, establishes automated checks, and verifies the QR-code workflow on the physical phone.
+
