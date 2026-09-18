@@ -1,6 +1,6 @@
 # Save Your Money — Product and Engineering Plan
 
-Status: Approved plan; implementation has not started.
+Status: Approved plan; the Expo SDK 57 scaffold and EAS project configuration exist, but product implementation has not started. Ticket-blocking architecture decisions are recorded in `docs/adr/`.
 
 ## 1. Product definition
 
@@ -256,7 +256,7 @@ These terms should appear consistently in code, tests, documentation, and interf
 
 The physical schema should be finalized during the storage milestone, but it must represent these concepts explicitly:
 
-- `app_settings`: currency, locale-related preferences, setup state, and current schema metadata.
+- `app_settings`: currency, locale-related preferences, and setup state.
 - `accounts`: stable ID, name, type, savings designation, opening balance, archived state, and timestamps.
 - `categories`: stable ID, name, default group, display order, archived state, and timestamps.
 - `monthly_budgets`: month, available amount, lifecycle state, template provenance, and timestamps.
@@ -266,11 +266,12 @@ The physical schema should be finalized during the storage milestone, but it mus
 - `recurring_rules`: event template, cadence, next due date, notification time, active state, and timestamps.
 - `recurring_occurrences`: rule, due date, status, and linked confirmed event.
 - `backup_history`: successful external-backup timestamp and non-sensitive verification metadata.
-- `schema_migrations`: applied version and timestamp.
 
 Required database constraints include foreign keys, nonzero positive input amounts, valid event-field combinations, unique month records, unique allocations per budget/category, and atomic transfer updates.
 
-Historical reporting must never depend on a category's current name, group, or archived state without an appropriate snapshot. Decide during schema design whether to retain labels in monthly snapshots or use a versioned category history; add tests before choosing the simpler implementation.
+`PRAGMA user_version` is the sole authority for the current schema version. Ordered migration files and released database fixtures form the schema history; they may be squashed only before the first signed APK containing schema v1 becomes an upgrade baseline. After that baseline, migration numbers, behavior, and fixtures are immutable. A database newer than the running application must fail closed without being modified.
+
+Every monthly budget snapshots the display name and budget group of each category available to that month, including categories with zero allocation. Financial events retain the category's stable ID, while historical reports use the corresponding monthly snapshot. Renaming, regrouping, or archiving a category affects future drafts only and never rewrites an existing month's meaning.
 
 ## 8. Architecture
 
@@ -282,7 +283,7 @@ Historical reporting must never depend on a category's current name, group, or a
 - `expo-sqlite` as the source of truth.
 - `expo-notifications` for local reminders.
 - `expo-file-system` and `expo-document-picker` for backup and export flows.
-- `expo-crypto` plus a reviewed passphrase-key-derivation implementation for authenticated encryption.
+- `expo-crypto` AES-256-GCM plus asynchronous scrypt from `@noble/hashes` for passphrase-based authenticated encryption.
 - React Context only for small transient application state.
 - No Redux or network data-cache framework in v1.
 
@@ -339,7 +340,11 @@ docs/
 
 The portable format must include a magic identifier, format version, database schema version, creation timestamp, key-derivation parameters, random salt, random nonce, and authenticated ciphertext. The passphrase or an irreplaceable key must never be stored only in Android SecureStore because uninstalling or changing devices would make the backup unreadable.
 
-The encryption implementation needs a focused security review and a real-phone performance calibration before its format is frozen.
+New backup passphrases must contain at least 12 Unicode code points. Do not trim or impose composition rules. Normalize to NFC, encode as UTF-8, cap encoded input at 256 bytes, and record the normalization version in the authenticated envelope. Confirm the passphrase twice and explain that it cannot be recovered. Restore remains compatible with valid supported backups that predate the current creation minimum.
+
+Use asynchronous scrypt behind a `PasswordKdf` port and derive 32 bytes for the Expo Crypto AES key. Generate a 16-byte salt with Expo Crypto. Benchmark fixed profiles in a release-mode build on the Realme 8i, starting with `N=2^16`, `r=8`, and `p=1` (approximately 64 MiB of scrypt working memory); fall back to `N=2^15` if the stronger profile cannot complete within two seconds without unacceptable UI freezing or memory pressure while the database and ciphertext buffers coexist. Store the selected parameters in the envelope, enforce strict allowlisted resource caps before derivation, and never tune parameters independently on each device.
+
+The encryption implementation needs a focused security review and the real-phone performance calibration before its format is frozen.
 
 ### Destructive actions
 
@@ -376,6 +381,8 @@ Use EAS cloud builds when custom Android configuration or standalone behavior mu
 - Internal preview APK for cold starts, airplane mode, reboot behavior, backup rules, file restoration, and release-like testing.
 - Successive APK versions with the same package ID and signing key for in-place upgrade tests.
 
+Preview builds used for update testing must receive monotonically increasing Android version codes. Run a two-APK signing and identity smoke test during M0, repeat with representative schema-v1 data during M2, then repeat before accepting each later schema migration and for release candidates or changes to storage or native backup configuration.
+
 Expo Go data is disposable development data. It does not demonstrate that the standalone application's Android backup, signing identity, package updates, or restore behavior works.
 
 ### Identity and signing
@@ -384,15 +391,18 @@ Expo Go data is disposable development data. It does not demonstrate that the st
 - Android package: `com.kianfratz.saveyourmoney`.
 - Use monotonically increasing Android version codes.
 - Preserve the same package identifier and signing certificate for all updates.
-- Back up the EAS-managed or exported signing credentials separately from the source repository and financial backups.
+- Replace the scaffold's placeholder Android identity before producing the first signed upgrade baseline.
+- Use an EAS-managed Android keystore. Before treating an APK as an upgrade baseline, verify durable ownership of the linked EAS project, export the keystore and credentials to two recoverable locations outside the repository, and record the signing-certificate fingerprint privately.
 
 ## 12. Test strategy
 
 ### Automated tests
 
+- Use Jest through `jest-expo` as the single JavaScript test runner and React Native Testing Library for components and routes. Confirm the compatible Testing Library major with a one-component installation spike before pinning it.
 - Unit-test money parsing, formatting boundaries, percentage validation, deterministic rounding, category remaining values, warnings, refunds, transfers, and savings progress.
 - Unit-test month lifecycle transitions and backdating restrictions.
-- Contract-test repository behavior and transaction atomicity against SQLite-compatible storage.
+- Define runner-neutral repository contract scenarios. Run them quickly through a thin `better-sqlite3` adapter, then run the same scenarios through the production `expo-sqlite` adapter in a dedicated non-production Android test build. Do not use Expo SQLite's Node stub as a persistence test.
+- Keep WAL/locking behavior, exclusive-transaction behavior, serialization, backup, and interruption recovery in the native integration suite. Exclude the native test harness entirely from production builds.
 - Test every schema migration from preserved older fixtures.
 - Component-test setup, quick entry, budget editing, warnings, and destructive confirmations.
 - Test backup envelope parsing, wrong passphrases, authentication failure, unsupported versions, corruption, and interrupted restoration.
@@ -418,7 +428,8 @@ Automated Android end-to-end testing is deferred because the approved workflow e
 - Initialize Git and an Expo TypeScript project using npm.
 - Establish strict TypeScript, lint, test, and formatting commands.
 - Configure Expo Router and the accessible theme foundation.
-- Record the package identifier and EAS project/signing ownership.
+- Replace the scaffold identity with `com.kianfratz.saveyourmoney`, verify EAS project ownership, establish and export the signing credential, and record its certificate fingerprint privately.
+- Produce two successively versioned signed preview APKs and verify an in-place update on the physical phone.
 
 Exit gate: the starter app opens through Expo Go, all automated checks pass, and the first commit is recoverable.
 
@@ -437,6 +448,7 @@ Exit gate: domain behavior is exhaustively unit-tested with no React Native or S
 - Implement migrations, repositories, foreign keys, and transactions.
 - Implement consistent local snapshots and migration rollback behavior.
 - Seed representative development data.
+- Install a signed schema-v1 baseline containing representative data, upgrade it in place, and verify persistence. Do not invent a migration solely for this test; exercise the first real v1-to-v2 migration before accepting it.
 
 Exit gate: repository contracts and migrations pass, failed writes leave no partial financial state, and data survives app restarts.
 
@@ -489,7 +501,7 @@ Exit gate: reminders survive normal restarts and overdue items remain visible ev
 
 ### M9 — Backup, restore, and CSV
 
-- Freeze the versioned encrypted-backup envelope after review.
+- Spike and calibrate asynchronous scrypt in a release build on the Realme 8i, then freeze the versioned encrypted-backup envelope after review.
 - Add consistent export, passphrase confirmation, post-write verification, transactional restore, and failure recovery.
 - Add Android backup rules and CSV export warnings.
 - Add backup status and reminders.
@@ -548,13 +560,14 @@ v1 is complete only when the user can:
 
 ## 17. Primary technical references
 
-- [Expo SQLite](https://docs.expo.dev/versions/latest/sdk/sqlite/)
-- [Expo Notifications](https://docs.expo.dev/versions/latest/sdk/notifications/)
-- [Expo FileSystem](https://docs.expo.dev/versions/latest/sdk/filesystem/)
-- [Expo DocumentPicker](https://docs.expo.dev/versions/latest/sdk/document-picker/)
-- [Expo Crypto](https://docs.expo.dev/versions/latest/sdk/crypto/)
+- [Expo SQLite — SDK 57](https://docs.expo.dev/versions/v57.0.0/sdk/sqlite/)
+- [Expo Notifications — SDK 57](https://docs.expo.dev/versions/v57.0.0/sdk/notifications/)
+- [Expo FileSystem — SDK 57](https://docs.expo.dev/versions/v57.0.0/sdk/filesystem/)
+- [Expo DocumentPicker — SDK 57](https://docs.expo.dev/versions/v57.0.0/sdk/document-picker/)
+- [Expo Crypto — SDK 57](https://docs.expo.dev/versions/v57.0.0/sdk/crypto/)
 - [Expo development builds](https://docs.expo.dev/develop/development-builds/introduction/)
 - [Expo internal distribution](https://docs.expo.dev/build/internal-distribution/)
 - [Android Auto Backup](https://developer.android.com/identity/data/autobackup)
 - [Android app updates](https://developer.android.com/google/play/app-updates)
-
+- [RFC 7914: scrypt](https://www.rfc-editor.org/rfc/rfc7914.html)
+- [`@noble/hashes` scrypt](https://github.com/paulmillr/noble-hashes#scrypt)

@@ -1,0 +1,5 @@
+# Use scrypt and AES-GCM for portable backups
+
+Portable backups use asynchronous scrypt from `@noble/hashes` to derive a 32-byte key and Expo Crypto AES-256-GCM to encrypt and authenticate a serialized SQLite snapshot. Argon2id is algorithmically attractive, but the available React Native integrations add an immature or unaudited native wrapper and remove Expo Go compatibility; scrypt provides a reviewed, maintained, dependency-free implementation with explicit memory and time costs. The exact fixed scrypt profile is frozen only after release-mode calibration on the Realme 8i, beginning with `N=2^16`, `r=8`, and `p=1` and falling back to `N=2^15` if necessary.
+
+The authenticated envelope records its format and schema versions, scrypt parameters, a random 16-byte salt, NFC/UTF-8 normalization version, nonce, and ciphertext. New passphrases require at least 12 Unicode code points and at most 256 encoded bytes; restore enforces allowlisted KDF resource limits before derivation and migrates older supported schemas in temporary storage before changing live data.
