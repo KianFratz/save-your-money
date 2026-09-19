@@ -2,7 +2,7 @@
 
 Save Your Money is a planned offline-first Android budget tracker built around an editable Needs/Wants/Savings percentage budget.
 
-The project is currently in the approved planning phase. Application scaffolding and implementation have not started.
+The Expo application scaffold and foundation quality checks are in place. Other foundation work remains.
 
 ## Product constraints
 
@@ -47,19 +47,17 @@ Each milestone has a mandatory exit gate in `PROJECT_PLAN.md`.
 
 ## Commands
 
-Commands will be added and verified during the foundation milestone. The intended interface is:
+The foundation quality commands are:
 
 ```bash
-npm install
+npm ci
 npm start
 npm run typecheck
 npm run lint
+npm run format:check
 npm test
 ```
 
-Do not treat these as operational until the Expo project and package scripts have been created.
-
 ## Current next step
 
-Begin M0 only after explicitly authorizing implementation. M0 initializes Git, scaffolds the Expo TypeScript application, establishes automated checks, and verifies the QR-code workflow on the physical phone.
-
+Continue the remaining M0 foundation work, including the physical-phone and signing gates in `PROJECT_PLAN.md`.

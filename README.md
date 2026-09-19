@@ -4,10 +4,10 @@ This is an [Expo](https://expo.dev) project created with [`create-expo-app`](htt
 
 ## Get started
 
-1. Install dependencies
+1. Install dependencies (Node.js 22.13 or newer)
 
    ```bash
-   npm install
+   npm ci
    ```
 
 2. Start the app
@@ -23,7 +23,22 @@ In the output, you'll find options to open the app in a
 - [iOS simulator](https://docs.expo.dev/workflow/ios-simulator/)
 - [Expo Go](https://expo.dev/go), a limited sandbox for trying out app development with Expo
 
-You can start developing by editing the files inside the **app** directory. This project uses [file-based routing](https://docs.expo.dev/router/introduction).
+## Quality checks
+
+Run these commands from the project root. They run locally without a phone or network service and exit with a nonzero status when a check fails.
+
+```bash
+npm run typecheck      # strict TypeScript check
+npm run lint           # ESLint, with warnings treated as failures
+npm run format:check   # Prettier check
+npm test               # Jest and React Native Testing Library
+```
+
+Use `npm run format` to apply Prettier formatting. To run one test file during development, use `npm test -- --runTestsByPath __tests__/home-route.test.tsx`.
+
+The routed test uses `expo-router/testing-library` with React Native Testing Library 13.3.3. Version 14.0.1 passed its package peer checks, but Expo Router 57's exported `screen` stayed uninitialized after `renderRouter`, so route queries and the `toHavePathname` matcher failed. Version 13.3.3 works with this SDK 57 scaffold and is pinned in the lockfile.
+
+You can start developing by editing the files inside the **src/app** directory. This project uses [file-based routing](https://docs.expo.dev/router/introduction).
 
 ## Get a fresh project
 
