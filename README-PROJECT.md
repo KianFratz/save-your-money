@@ -61,4 +61,4 @@ npm test
 
 ## Current next step
 
-Continue the remaining M0 foundation work, including the physical-phone and signing gates in `PROJECT_PLAN.md`.
+Continue the remaining M0 foundation work. The Android identity, signing, and physical-phone in-place update check for issue #2 is recorded in the [verification note](docs/verification/android-identity.md).
