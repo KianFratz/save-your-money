@@ -17,6 +17,7 @@ The Expo application scaffold and foundation quality checks are in place. Other 
 
 - [Product and engineering plan](PROJECT_PLAN.md)
 - [Release and recovery checklist](RELEASE_RECOVERY_CHECKLIST.md)
+- [Android identity and update probe](docs/verification/android-identity.md)
 
 ## Planned stack
 
