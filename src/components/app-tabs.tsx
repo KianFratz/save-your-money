@@ -12,7 +12,10 @@ export default function AppTabs() {
       backgroundColor={colors.background}
       indicatorColor={colors.backgroundElement}
       labelVisibilityMode="labeled"
-      labelStyle={{ selected: { color: colors.text } }}>
+      labelStyle={{
+        default: { color: colors.textSecondary, fontSize: 10 },
+        selected: { color: colors.text, fontSize: 10 },
+      }}>
       <NativeTabs.Trigger name="index">
         <NativeTabs.Trigger.Label>Home</NativeTabs.Trigger.Label>
         <NativeTabs.Trigger.Icon sf="house" md="home" />
