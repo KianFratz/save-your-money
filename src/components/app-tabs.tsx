@@ -28,8 +28,8 @@ export default function AppTabs() {
         <NativeTabs.Trigger.Label>Budget</NativeTabs.Trigger.Label>
         <NativeTabs.Trigger.Icon sf="chart.pie" md="pie_chart" />
       </NativeTabs.Trigger>
-      <NativeTabs.Trigger name="transactions">
-        <NativeTabs.Trigger.Label>Transactions</NativeTabs.Trigger.Label>
+      <NativeTabs.Trigger name="transactions" accessibilityLabel="Transactions">
+        <NativeTabs.Trigger.Label>Activity</NativeTabs.Trigger.Label>
         <NativeTabs.Trigger.Icon sf="list.bullet.rectangle" md="receipt_long" />
       </NativeTabs.Trigger>
       <NativeTabs.Trigger name="reports">
