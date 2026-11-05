@@ -1,5 +1,6 @@
 import { expect, jest, test } from '@jest/globals';
 import { fireEvent, renderRouter, screen } from 'expo-router/testing-library';
+import type { PropsWithChildren } from 'react';
 
 import TabLayout from '@/app/_layout';
 import BudgetScreen from '@/app/budget';
@@ -9,6 +10,39 @@ import SettingsScreen from '@/app/settings';
 import TransactionsScreen from '@/app/transactions';
 import WebTabs from '@/components/app-tabs.web';
 import { StateMessage } from '@/components/state-message';
+
+jest.mock('expo-sqlite', () => ({
+  SQLiteProvider: ({ children }: PropsWithChildren) => children,
+}));
+
+jest.mock('@/features/allowance/allowance-data-provider', () => ({
+  AllowanceDataProvider: ({ children }: PropsWithChildren) => children,
+  useClearAllowanceErrorOnBlur: jest.fn(),
+  useAllowanceData: () => ({
+    snapshot: {
+      activePeriod: null,
+      draftPeriod: null,
+      recentEvents: [],
+      accounts: [],
+      categories: [],
+      periods: [],
+    },
+    isLoading: false,
+    isSaving: false,
+    errorMessage: null,
+    refresh: jest.fn(),
+    clearError: jest.fn(),
+    createDraft: jest.fn(),
+    activate: jest.fn(),
+    close: jest.fn(),
+    reopen: jest.fn(),
+    setCategoryAllocation: jest.fn(),
+    recordEvent: jest.fn(),
+    applyLeftover: jest.fn(),
+    createAccount: jest.fn(),
+    createCategory: jest.fn(),
+  }),
+}));
 
 const routes = {
   _layout: TabLayout,
@@ -20,10 +54,10 @@ const routes = {
 };
 
 test.each([
-  ['/', 'Home', 'Nothing to show yet'],
-  ['/budget', 'Budget', 'No monthly budget yet'],
-  ['/transactions', 'Transactions', 'No transactions yet'],
-  ['/reports', 'Reports', 'No report available yet'],
+  ['/', 'Allowance', 'Set up your sister’s allowance'],
+  ['/budget', 'Plan', 'New allowance'],
+  ['/transactions', 'Activity', 'Ledger'],
+  ['/reports', 'Reports', 'No report yet'],
   ['/settings', 'Settings', 'Your data stays on this device'],
 ])('opens %s without an account', (path, title, message) => {
   const { getPathname } = renderRouter(routes, { initialUrl: path });
@@ -36,16 +70,16 @@ test.each([
 test('switches tabs through the web shell', () => {
   const { getPathname } = renderRouter({ ...routes, _layout: WebTabs }, { initialUrl: '/' });
 
-  for (const [label, path] of [
-    ['Budget', '/budget'],
-    ['Transactions', '/transactions'],
-    ['Reports', '/reports'],
-    ['Settings', '/settings'],
-    ['Home', '/'],
+  for (const [label, path, header] of [
+    ['Budget', '/budget', 'Plan'],
+    ['Transactions', '/transactions', 'Activity'],
+    ['Reports', '/reports', 'Reports'],
+    ['Settings', '/settings', 'Settings'],
+    ['Home', '/', 'Allowance'],
   ]) {
     fireEvent.press(screen.getByRole('tab', { name: `${label} tab` }));
     expect(getPathname()).toBe(path);
-    expect(screen.getByRole('header', { name: label })).toBeTruthy();
+    expect(screen.getByRole('header', { name: header })).toBeTruthy();
   }
 });
 

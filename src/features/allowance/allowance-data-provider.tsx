@@ -1,4 +1,5 @@
 import { useSQLiteContext } from 'expo-sqlite';
+import { useFocusEffect } from 'expo-router';
 import {
   createContext,
   type PropsWithChildren,
@@ -13,6 +14,7 @@ import {
   activatePeriod,
   addAccount,
   addCategory,
+  applyHeldAllowance,
   closePeriod,
   createPeriodDraft,
   loadAllowanceSnapshot,
@@ -22,6 +24,7 @@ import {
 } from '@/data/repositories/allowance-repository';
 import type {
   AccountType,
+  ApplyLeftoverInput,
   AllowanceSnapshot,
   BudgetGroupKey,
   CreatePeriodInput,
@@ -45,6 +48,7 @@ type AllowanceDataContextValue = {
     allocatedCents: number,
   ) => Promise<void>;
   recordEvent: (input: RecordEventInput) => Promise<void>;
+  applyLeftover: (input: ApplyLeftoverInput) => Promise<void>;
   createAccount: (input: {
     name: string;
     type: AccountType;
@@ -61,6 +65,7 @@ export function AllowanceDataProvider({ children }: PropsWithChildren) {
   const [isLoading, setIsLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
+  const clearError = useCallback(() => setErrorMessage(null), []);
 
   const refresh = useCallback(async () => {
     setIsLoading(true);
@@ -75,8 +80,28 @@ export function AllowanceDataProvider({ children }: PropsWithChildren) {
   }, [database]);
 
   useEffect(() => {
-    void refresh();
-  }, [refresh]);
+    let cancelled = false;
+    void loadAllowanceSnapshot(database)
+      .then((nextSnapshot) => {
+        if (!cancelled) {
+          setSnapshot(nextSnapshot);
+          setErrorMessage(null);
+        }
+      })
+      .catch((error: unknown) => {
+        if (!cancelled) {
+          setErrorMessage(getErrorMessage(error));
+        }
+      })
+      .finally(() => {
+        if (!cancelled) {
+          setIsLoading(false);
+        }
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [database]);
 
   const execute = useCallback(
     async (operation: () => Promise<void>) => {
@@ -103,18 +128,20 @@ export function AllowanceDataProvider({ children }: PropsWithChildren) {
       isSaving,
       errorMessage,
       refresh,
-      clearError: () => setErrorMessage(null),
-      createDraft: (input) => execute(() => createPeriodDraft(database, input).then(() => undefined)),
+      clearError,
+      createDraft: (input) =>
+        execute(() => createPeriodDraft(database, input).then(() => undefined)),
       activate: (periodId) => execute(() => activatePeriod(database, periodId)),
       close: (periodId) => execute(() => closePeriod(database, periodId)),
       reopen: (periodId) => execute(() => reopenPeriod(database, periodId)),
       setCategoryAllocation: (periodId, categoryId, allocatedCents) =>
         execute(() => updateCategoryAllocation(database, periodId, categoryId, allocatedCents)),
       recordEvent: (input) => execute(() => recordFinancialEvent(database, input)),
+      applyLeftover: (input) => execute(() => applyHeldAllowance(database, input)),
       createAccount: (input) => execute(() => addAccount(database, input)),
       createCategory: (input) => execute(() => addCategory(database, input)),
     }),
-    [database, errorMessage, execute, isLoading, isSaving, refresh, snapshot],
+    [clearError, database, errorMessage, execute, isLoading, isSaving, refresh, snapshot],
   );
 
   return <AllowanceDataContext.Provider value={value}>{children}</AllowanceDataContext.Provider>;
@@ -126,6 +153,11 @@ export function useAllowanceData(): AllowanceDataContextValue {
     throw new Error('useAllowanceData must be used within AllowanceDataProvider.');
   }
   return context;
+}
+
+export function useClearAllowanceErrorOnBlur(): void {
+  const { clearError } = useAllowanceData();
+  useFocusEffect(useCallback(() => clearError, [clearError]));
 }
 
 function getErrorMessage(error: unknown): string {

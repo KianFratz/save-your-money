@@ -3,11 +3,14 @@ import type { SQLiteDatabase } from 'expo-sqlite';
 import {
   allocateByLargestRemainder,
   getPeriodBounds,
+  isValidIsoDate,
+  todayIsoDate,
   validateGroupPercentages,
 } from '@/domain/allowance';
 import type {
   Account,
   AccountType,
+  ApplyLeftoverInput,
   AllowancePeriod,
   AllowanceSnapshot,
   BudgetGroupKey,
@@ -51,6 +54,17 @@ type PeriodRow = {
   given_cents: number;
   returned_cents: number;
   used_cents: number;
+  leftover_applied_cents: number;
+  leftover_committed_cents: number;
+};
+
+type LeftoverRow = {
+  id: number;
+  source_period_id: number;
+  target_period_id: number;
+  amount_cents: number;
+  effective_date: string;
+  note: string | null;
 };
 
 type AllocationRow = {
@@ -81,13 +95,15 @@ type EventRow = {
 };
 
 export async function loadAllowanceSnapshot(db: SQLiteDatabase): Promise<AllowanceSnapshot> {
-  const [accountRows, categoryRows, periodRows, allocationRows, eventRows] = await Promise.all([
-    db.getAllAsync<AccountRow>(ACCOUNTS_QUERY),
-    db.getAllAsync<CategoryRow>(CATEGORIES_QUERY),
-    db.getAllAsync<PeriodRow>(PERIODS_QUERY),
-    db.getAllAsync<AllocationRow>(ALLOCATIONS_QUERY),
-    db.getAllAsync<EventRow>(EVENTS_QUERY, 100),
-  ]);
+  const [accountRows, categoryRows, periodRows, allocationRows, eventRows, leftoverRows] =
+    await Promise.all([
+      db.getAllAsync<AccountRow>(ACCOUNTS_QUERY),
+      db.getAllAsync<CategoryRow>(CATEGORIES_QUERY),
+      db.getAllAsync<PeriodRow>(PERIODS_QUERY),
+      db.getAllAsync<AllocationRow>(ALLOCATIONS_QUERY),
+      db.getAllAsync<EventRow>(EVENTS_QUERY, 100),
+      db.getAllAsync<LeftoverRow>(LEFTOVER_EVENTS_QUERY),
+    ]);
 
   const allocationsByPeriod = groupAllocationsByPeriod(allocationRows);
   const periods = periodRows.map((periodRow) =>
@@ -97,11 +113,68 @@ export async function loadAllowanceSnapshot(db: SQLiteDatabase): Promise<Allowan
   return {
     activePeriod: periods.find((period) => period.state === 'active') ?? null,
     draftPeriod: periods.find((period) => period.state === 'draft') ?? null,
-    recentEvents: eventRows.map(mapEvent),
+    recentEvents: [...eventRows.map(mapEvent), ...leftoverRows.map(mapLeftoverEvent)]
+      .sort(
+        (left, right) =>
+          right.effectiveDate.localeCompare(left.effectiveDate) || right.id - left.id,
+      )
+      .slice(0, 100),
     accounts: accountRows.map(mapAccount),
     categories: categoryRows.map(mapCategory),
     periods,
   };
+}
+
+export async function applyHeldAllowance(
+  db: SQLiteDatabase,
+  input: ApplyLeftoverInput,
+): Promise<void> {
+  if (!Number.isSafeInteger(input.amountCents) || input.amountCents <= 0) {
+    throw new Error('Enter an amount greater than zero.');
+  }
+  if (!isValidIsoDate(input.effectiveDate)) {
+    throw new Error('Enter a valid date in YYYY-MM-DD format.');
+  }
+  if (input.effectiveDate > todayIsoDate()) {
+    throw new Error('Future entries are not allowed.');
+  }
+
+  const source = await db.getFirstAsync<{
+    state: 'draft' | 'active' | 'closed';
+    available_cents: number;
+  }>(SOURCE_HELD_BALANCE_QUERY, input.sourcePeriodId);
+  if (!source || source.state !== 'closed') {
+    throw new Error('Choose a closed period with allowance still held by your sister.');
+  }
+  if (source.available_cents < input.amountCents) {
+    throw new Error('The applied amount is greater than the held balance from that period.');
+  }
+
+  const target = await db.getFirstAsync<{
+    state: 'draft' | 'active' | 'closed';
+    start_date: string;
+    end_date: string;
+  }>(
+    'SELECT state, start_date, end_date FROM allowance_periods WHERE id = ?',
+    input.targetPeriodId,
+  );
+  if (!target || target.state !== 'active') {
+    throw new Error('Activate the new allowance period before applying held money.');
+  }
+  if (input.effectiveDate < target.start_date || input.effectiveDate > target.end_date) {
+    throw new Error(`Choose a date from ${target.start_date} to ${target.end_date}.`);
+  }
+
+  await db.runAsync(
+    `INSERT INTO leftover_applications
+      (source_period_id, target_period_id, amount_cents, effective_date, note)
+     VALUES (?, ?, ?, ?, ?)`,
+    input.sourcePeriodId,
+    input.targetPeriodId,
+    input.amountCents,
+    input.effectiveDate,
+    input.note?.trim() || null,
+  );
 }
 
 export async function createPeriodDraft(
@@ -286,6 +359,8 @@ export async function recordFinancialEvent(
 ): Promise<void> {
   validateRecordEventInput(input);
 
+  await validateEventContext(db, input);
+
   if (input.type === 'saved_money_use') {
     await assertSavingsBalance(db, input.savingsSourceCategoryId, input.amountCents);
   }
@@ -348,6 +423,9 @@ export async function addCategory(
 }
 
 function validateRecordEventInput(input: RecordEventInput): void {
+  if (input.type === 'leftover_application') {
+    throw new Error('Apply held allowance through its source and target periods.');
+  }
   if (!Number.isSafeInteger(input.amountCents) || input.amountCents <= 0) {
     throw new Error('Enter an amount greater than zero.');
   }
@@ -364,6 +442,76 @@ function validateRecordEventInput(input: RecordEventInput): void {
   if (input.type === 'saved_money_use' && (!input.categoryId || !input.savingsSourceCategoryId)) {
     throw new Error('Select both the savings source and what it funded.');
   }
+  if (!isValidIsoDate(input.effectiveDate)) {
+    throw new Error('Enter a valid date in YYYY-MM-DD format.');
+  }
+  if (input.effectiveDate > todayIsoDate()) {
+    throw new Error('Future entries are not allowed.');
+  }
+}
+
+async function validateEventContext(db: SQLiteDatabase, input: RecordEventInput): Promise<void> {
+  if (input.type === 'saved_money_use') {
+    return;
+  }
+
+  const periodId = input.periodId;
+  if (periodId === undefined) {
+    throw new Error('Select an allowance period.');
+  }
+
+  const period = await db.getFirstAsync<{
+    state: 'draft' | 'active' | 'closed';
+    start_date: string;
+    end_date: string;
+  }>('SELECT state, start_date, end_date FROM allowance_periods WHERE id = ?', periodId);
+  if (!period) {
+    throw new Error('Select an allowance period.');
+  }
+  if (period.state !== 'active') {
+    throw new Error(
+      period.state === 'closed'
+        ? 'Reopen this period before adding an entry.'
+        : 'Activate this draft before adding an entry.',
+    );
+  }
+  if (input.effectiveDate < period.start_date || input.effectiveDate > period.end_date) {
+    throw new Error(`Choose a date from ${period.start_date} to ${period.end_date}.`);
+  }
+
+  if ((input.type === 'use' || input.type === 'refund') && input.categoryId) {
+    const allocation = await db.getFirstAsync<{ category_id: number }>(
+      'SELECT category_id FROM category_allocations WHERE period_id = ? AND category_id = ?',
+      periodId,
+      input.categoryId,
+    );
+    if (!allocation) {
+      throw new Error('That category is not part of this allowance period.');
+    }
+  }
+
+  if (input.type === 'refund' && input.categoryId) {
+    const spending = await db.getFirstAsync<{ net_used: number }>(
+      `SELECT COALESCE(SUM(CASE WHEN type = 'use' THEN amount_cents WHEN type = 'refund' THEN -amount_cents ELSE 0 END), 0) AS net_used
+       FROM financial_events WHERE period_id = ? AND category_id = ?`,
+      periodId,
+      input.categoryId,
+    );
+    if ((spending?.net_used ?? 0) < input.amountCents) {
+      throw new Error('A refund cannot be greater than the spending logged for this category.');
+    }
+  }
+
+  if (input.type === 'return') {
+    const funding = await db.getFirstAsync<{ net_given: number }>(
+      `SELECT COALESCE(SUM(CASE WHEN type = 'disbursement' THEN amount_cents WHEN type = 'return' THEN -amount_cents ELSE 0 END), 0) AS net_given
+       FROM financial_events WHERE period_id = ?`,
+      periodId,
+    );
+    if ((funding?.net_given ?? 0) < input.amountCents) {
+      throw new Error('The returned amount cannot be greater than the allowance given.');
+    }
+  }
 }
 
 async function assertSavingsBalance(
@@ -374,7 +522,10 @@ async function assertSavingsBalance(
   if (!savingsSourceCategoryId) {
     throw new Error('Select a savings source.');
   }
-  const category = await db.getFirstAsync<CategoryRow>(CATEGORIES_QUERY + ' HAVING c.id = ?', savingsSourceCategoryId);
+  const category = await db.getFirstAsync<CategoryRow>(
+    CATEGORIES_QUERY + ' HAVING c.id = ?',
+    savingsSourceCategoryId,
+  );
   if (!category || category.group_key !== 'savings') {
     throw new Error('Select a Savings category as the source.');
   }
@@ -400,35 +551,38 @@ function mapPeriod(row: PeriodRow, allocationRows: AllocationRow[]): AllowancePe
     savings: row.savings_percentage,
   };
   const groupAllocations = allocateByLargestRemainder(row.planned_cents, percentages);
-  const groups = (Object.keys(groupAllocations) as BudgetGroupKey[]).map<GroupSummary>((groupKey) => {
-    const categories = allocationRows
-      .filter((allocation) => allocation.group_key_snapshot === groupKey)
-      .map<CategoryAllocation>((allocation) => ({
-        categoryId: allocation.category_id,
-        categoryName: allocation.category_name_snapshot,
+  const groups = (Object.keys(groupAllocations) as BudgetGroupKey[]).map<GroupSummary>(
+    (groupKey) => {
+      const categories = allocationRows
+        .filter((allocation) => allocation.group_key_snapshot === groupKey)
+        .map<CategoryAllocation>((allocation) => ({
+          categoryId: allocation.category_id,
+          categoryName: allocation.category_name_snapshot,
+          groupKey,
+          allocatedCents: allocation.allocated_cents,
+          usedCents: allocation.used_cents,
+          remainingCents: allocation.allocated_cents - allocation.used_cents,
+          displayOrder: allocation.display_order,
+        }));
+      const categoryAllocatedCents = categories.reduce(
+        (sum, category) => sum + category.allocatedCents,
+        0,
+      );
+      const usedCents = categories.reduce((sum, category) => sum + category.usedCents, 0);
+      return {
         groupKey,
-        allocatedCents: allocation.allocated_cents,
-        usedCents: allocation.used_cents,
-        remainingCents: allocation.allocated_cents - allocation.used_cents,
-        displayOrder: allocation.display_order,
-      }));
-    const categoryAllocatedCents = categories.reduce(
-      (sum, category) => sum + category.allocatedCents,
-      0,
-    );
-    const usedCents = categories.reduce((sum, category) => sum + category.usedCents, 0);
-    return {
-      groupKey,
-      percentage: percentages[groupKey],
-      allocatedCents: groupAllocations[groupKey],
-      categoryAllocatedCents,
-      usedCents,
-      remainingCents: groupAllocations[groupKey] - usedCents,
-      unallocatedCents: groupAllocations[groupKey] - categoryAllocatedCents,
-      categories,
-    };
-  });
+        percentage: percentages[groupKey],
+        allocatedCents: groupAllocations[groupKey],
+        categoryAllocatedCents,
+        usedCents,
+        remainingCents: groupAllocations[groupKey] - usedCents,
+        unallocatedCents: groupAllocations[groupKey] - categoryAllocatedCents,
+        categories,
+      };
+    },
+  );
   const netGivenCents = row.given_cents - row.returned_cents;
+  const fundedCents = netGivenCents + row.leftover_applied_cents;
 
   return {
     id: row.id,
@@ -445,7 +599,10 @@ function mapPeriod(row: PeriodRow, allocationRows: AllocationRow[]): AllowancePe
     netGivenCents,
     usedCents: row.used_cents,
     remainingCents: row.planned_cents - row.used_cents,
-    sisterHeldCents: netGivenCents - row.used_cents,
+    leftoverAppliedCents: row.leftover_applied_cents,
+    leftoverCommittedCents: row.leftover_committed_cents,
+    fundedCents,
+    sisterHeldCents: fundedCents - row.used_cents - row.leftover_committed_cents,
     groups,
   };
 }
@@ -487,6 +644,27 @@ function mapEvent(row: EventRow): FinancialEvent {
     savingsSourceCategoryId: row.savings_source_category_id,
     savingsSourceCategoryName: row.savings_source_category_name,
     linkedEventId: row.linked_event_id,
+    sourcePeriodId: null,
+    note: row.note,
+  };
+}
+
+function mapLeftoverEvent(row: LeftoverRow): FinancialEvent {
+  return {
+    id: -row.id,
+    periodId: row.target_period_id,
+    type: 'leftover_application',
+    amountCents: row.amount_cents,
+    effectiveDate: row.effective_date,
+    accountId: null,
+    accountName: null,
+    categoryId: null,
+    categoryName: null,
+    groupKey: null,
+    savingsSourceCategoryId: null,
+    savingsSourceCategoryName: null,
+    linkedEventId: null,
+    sourcePeriodId: row.source_period_id,
     note: row.note,
   };
 }
@@ -512,9 +690,9 @@ const ACCOUNTS_QUERY = `
 
 const CATEGORIES_QUERY = `
   SELECT c.id, c.name, c.group_key, c.display_order, c.archived,
-    COALESCE(SUM(CASE WHEN fe.type = 'use' AND c.group_key = 'savings' THEN fe.amount_cents ELSE 0 END), 0)
-      - COALESCE(SUM(CASE WHEN fe.type = 'refund' AND c.group_key = 'savings' THEN fe.amount_cents ELSE 0 END), 0)
-      - COALESCE(SUM(CASE WHEN fe.type = 'saved_money_use' THEN fe.amount_cents ELSE 0 END), 0)
+    COALESCE(SUM(CASE WHEN fe.type = 'use' AND fe.category_id = c.id AND c.group_key = 'savings' THEN fe.amount_cents ELSE 0 END), 0)
+      - COALESCE(SUM(CASE WHEN fe.type = 'refund' AND fe.category_id = c.id AND c.group_key = 'savings' THEN fe.amount_cents ELSE 0 END), 0)
+      - COALESCE(SUM(CASE WHEN fe.type = 'saved_money_use' AND fe.savings_source_category_id = c.id THEN fe.amount_cents ELSE 0 END), 0)
       AS saved_balance_cents
   FROM categories c
   LEFT JOIN financial_events fe
@@ -526,7 +704,9 @@ const PERIODS_QUERY = `
     p.needs_percentage, p.wants_percentage, p.savings_percentage,
     COALESCE(SUM(CASE WHEN fe.type = 'disbursement' THEN fe.amount_cents ELSE 0 END), 0) AS given_cents,
     COALESCE(SUM(CASE WHEN fe.type = 'return' THEN fe.amount_cents ELSE 0 END), 0) AS returned_cents,
-    COALESCE(SUM(CASE WHEN fe.type = 'use' THEN fe.amount_cents WHEN fe.type = 'refund' THEN -fe.amount_cents ELSE 0 END), 0) AS used_cents
+    COALESCE(SUM(CASE WHEN fe.type = 'use' THEN fe.amount_cents WHEN fe.type = 'refund' THEN -fe.amount_cents ELSE 0 END), 0) AS used_cents,
+    COALESCE((SELECT SUM(amount_cents) FROM leftover_applications WHERE target_period_id = p.id), 0) AS leftover_applied_cents,
+    COALESCE((SELECT SUM(amount_cents) FROM leftover_applications WHERE source_period_id = p.id), 0) AS leftover_committed_cents
   FROM allowance_periods p
   LEFT JOIN financial_events fe ON fe.period_id = p.id
   GROUP BY p.id
@@ -556,3 +736,18 @@ const EVENTS_QUERY = `
   LEFT JOIN categories source ON source.id = fe.savings_source_category_id
   ORDER BY fe.effective_date DESC, fe.id DESC
   LIMIT ?`;
+
+const LEFTOVER_EVENTS_QUERY = `
+  SELECT id, source_period_id, target_period_id, amount_cents, effective_date, note
+  FROM leftover_applications
+  ORDER BY effective_date DESC, id DESC
+  LIMIT 100`;
+
+const SOURCE_HELD_BALANCE_QUERY = `
+  SELECT p.state,
+    COALESCE((SELECT SUM(CASE WHEN type = 'disbursement' THEN amount_cents WHEN type = 'return' THEN -amount_cents ELSE 0 END) FROM financial_events WHERE period_id = p.id), 0)
+      - COALESCE((SELECT SUM(CASE WHEN type = 'use' THEN amount_cents WHEN type = 'refund' THEN -amount_cents ELSE 0 END) FROM financial_events WHERE period_id = p.id), 0)
+      - COALESCE((SELECT SUM(amount_cents) FROM leftover_applications WHERE source_period_id = p.id), 0)
+      AS available_cents
+  FROM allowance_periods p
+  WHERE p.id = ?`;

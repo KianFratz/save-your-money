@@ -3,11 +3,7 @@ export type AllowanceCadence = 'monthly' | 'biweekly';
 export type AllowancePeriodState = 'draft' | 'active' | 'closed';
 export type AccountType = 'cash' | 'bank' | 'ewallet';
 export type FinancialEventType =
-  | 'disbursement'
-  | 'return'
-  | 'use'
-  | 'refund'
-  | 'saved_money_use';
+  'disbursement' | 'return' | 'use' | 'refund' | 'saved_money_use' | 'leftover_application';
 
 export type CategorySeed = {
   name: string;
@@ -68,6 +64,9 @@ export type AllowancePeriod = {
   netGivenCents: number;
   usedCents: number;
   remainingCents: number;
+  leftoverAppliedCents: number;
+  leftoverCommittedCents: number;
+  fundedCents: number;
   sisterHeldCents: number;
   groups: GroupSummary[];
 };
@@ -86,6 +85,7 @@ export type FinancialEvent = {
   savingsSourceCategoryId: number | null;
   savingsSourceCategoryName: string | null;
   linkedEventId: number | null;
+  sourcePeriodId: number | null;
   note: string | null;
 };
 
@@ -116,5 +116,13 @@ export type RecordEventInput = {
   categoryId?: number;
   savingsSourceCategoryId?: number;
   linkedEventId?: number;
+  note?: string;
+};
+
+export type ApplyLeftoverInput = {
+  sourcePeriodId: number;
+  targetPeriodId: number;
+  amountCents: number;
+  effectiveDate: string;
   note?: string;
 };

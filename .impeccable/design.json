@@ -1,0 +1,172 @@
+{
+  "schemaVersion": 2,
+  "generatedAt": "2026-11-06T00:23:09+08:00",
+  "title": "Design System: Save Your Money — Flow of Funds",
+  "extensions": {
+    "completion": {
+      "mode": "code-first",
+      "status": "complete",
+      "basis": "Implemented React Native screens, theme tokens, and shared allowance components",
+      "verification": {
+        "sourceReview": true,
+        "physicalAndroidDeviceConnected": false,
+        "constraint": "No physical Android device was connected for final visual or interaction verification."
+      }
+    },
+    "colorMeta": {
+      "light-primary": {
+        "role": "primary",
+        "displayName": "Ledger Blue",
+        "canonical": "#435D92",
+        "tonalRamp": ["#0A1830", "#172B4D", "#294677", "#435D92", "#7189B8", "#ADC6FF", "#D9E2FF", "#F2F5FF"]
+      },
+      "light-needs": {
+        "role": "secondary",
+        "displayName": "Needs Blue",
+        "canonical": "#5375AF",
+        "tonalRamp": ["#0B1B35", "#18335C", "#2E5287", "#5375AF", "#7F9BCB", "#A9C7FF", "#D8E5FF", "#F3F7FF"]
+      },
+      "light-wants": {
+        "role": "secondary",
+        "displayName": "Wants Violet",
+        "canonical": "#8B5C99",
+        "tonalRamp": ["#26102D", "#43204D", "#683B75", "#8B5C99", "#B184BE", "#E5B6EF", "#F5D9FA", "#FFF4FF"]
+      },
+      "light-savings": {
+        "role": "secondary",
+        "displayName": "Savings Green",
+        "canonical": "#377A58",
+        "tonalRamp": ["#082719", "#16422E", "#286344", "#377A58", "#68A47F", "#9AD8B1", "#C8EBD4", "#F0FBF3"]
+      },
+      "light-warning-container": {
+        "role": "tertiary",
+        "displayName": "Attention Gold",
+        "canonical": "#FFE08A",
+        "tonalRamp": ["#2A2100", "#594700", "#806600", "#AA8700", "#D2AD36", "#FFE08A", "#FFEDBA", "#FFF9E9"]
+      },
+      "light-background": {
+        "role": "neutral",
+        "displayName": "Cool App Canvas",
+        "canonical": "#F9F9FF",
+        "tonalRamp": ["#121318", "#1E1F25", "#303137", "#46464F", "#767680", "#C6C6D0", "#E4E1E9", "#F9F9FF"]
+      }
+    },
+    "typographyMeta": {
+      "screen-title": { "displayName": "Screen Title", "purpose": "Top-level destination heading." },
+      "section-heading": { "displayName": "Section Heading", "purpose": "Major blocks within a screen." },
+      "body": { "displayName": "Body", "purpose": "Guidance, field text, and descriptions." },
+      "label": { "displayName": "Label", "purpose": "Uppercase field and financial metadata." },
+      "money": { "displayName": "Money", "purpose": "Comparable period-level peso amounts." }
+    },
+    "shadows": [],
+    "motion": [
+      { "name": "quick-entry-sheet", "value": "native slide", "purpose": "Presents the Home quick-entry form as an Android page sheet." },
+      { "name": "pressed-feedback", "value": "opacity 0.55", "purpose": "Immediate press and disabled feedback for actions." }
+    ],
+    "breakpoints": [
+      { "name": "content-max", "value": "800dp" },
+      { "name": "phone-fluid", "value": "0–799dp" }
+    ]
+  },
+  "components": [
+    {
+      "name": "Primary Action",
+      "kind": "button",
+      "refersTo": "button-primary",
+      "description": "The single strongest action in the current task flow.",
+      "html": "<button class=\"ds-btn-primary\">Log allowance use</button>",
+      "css": ".ds-btn-primary { min-height:48px; border:1px solid #C6C6D0; border-radius:24px; padding:12px 24px; background:#435D92; color:#FFFFFF; font:700 14px system-ui,sans-serif; transition:opacity 120ms ease; } .ds-btn-primary:hover { opacity:.88; } .ds-btn-primary:active { opacity:.55; } .ds-btn-primary:focus-visible { outline:3px solid #D9E2FF; outline-offset:2px; } .ds-btn-primary:disabled { opacity:.55; } @media (prefers-color-scheme:dark) { .ds-btn-primary { background:#ADC6FF; color:#112F60; border-color:#46464F; } .ds-btn-primary:focus-visible { outline-color:#294677; } }"
+    },
+    {
+      "name": "Secondary Action",
+      "kind": "button",
+      "refersTo": "button-secondary",
+      "description": "A reversible supporting action such as Close, Cancel, or Copy.",
+      "html": "<button class=\"ds-btn-secondary\">Close</button>",
+      "css": ".ds-btn-secondary { min-height:48px; border:1px solid #C6C6D0; border-radius:24px; padding:12px 24px; background:#F0F0F7; color:#1B1B1F; font:700 14px system-ui,sans-serif; transition:opacity 120ms ease; } .ds-btn-secondary:hover { background:#D9E2FF; } .ds-btn-secondary:active { opacity:.55; } .ds-btn-secondary:focus-visible { outline:3px solid #435D92; outline-offset:2px; } @media (prefers-color-scheme:dark) { .ds-btn-secondary { background:#1E1F25; color:#E4E1E9; border-color:#46464F; } .ds-btn-secondary:hover { background:#294677; } .ds-btn-secondary:focus-visible { outline-color:#ADC6FF; } }"
+    },
+    {
+      "name": "Selected Choice Chip",
+      "kind": "chip",
+      "refersTo": "chip-selected",
+      "description": "A selected option within a labeled radio group.",
+      "html": "<button class=\"ds-chip-selected\" role=\"radio\" aria-checked=\"true\">Monthly</button>",
+      "css": ".ds-chip-selected { min-height:48px; border:1px solid #435D92; border-radius:24px; padding:0 16px; background:#D9E2FF; color:#1B1B1F; font:700 14px system-ui,sans-serif; } .ds-chip-selected:hover { filter:brightness(.97); } .ds-chip-selected:active { opacity:.7; } .ds-chip-selected:focus-visible { outline:3px solid #435D92; outline-offset:2px; } @media (prefers-color-scheme:dark) { .ds-chip-selected { background:#294677; color:#E4E1E9; border-color:#ADC6FF; } .ds-chip-selected:focus-visible { outline-color:#ADC6FF; } }"
+    },
+    {
+      "name": "Form Field",
+      "kind": "input",
+      "refersTo": "field",
+      "description": "A labeled Android field for money, dates, search, and notes.",
+      "html": "<label class=\"ds-field-label\">Amount<input class=\"ds-field\" inputmode=\"decimal\" placeholder=\"₱0.00\"></label>",
+      "css": ".ds-field-label { display:grid; gap:8px; color:#46464F; font:700 12px/16px system-ui,sans-serif; letter-spacing:.7px; text-transform:uppercase; } .ds-field { min-height:52px; border:1px solid #767680; border-radius:12px; padding:8px 16px; background:#F0F0F7; color:#1B1B1F; font:500 16px system-ui,sans-serif; } .ds-field:hover { border-color:#435D92; } .ds-field:focus-visible { border-color:#435D92; outline:3px solid #D9E2FF; outline-offset:1px; } .ds-field::placeholder { color:#46464F; } @media (prefers-color-scheme:dark) { .ds-field-label { color:#C7C5D0; } .ds-field { background:#1E1F25; color:#E4E1E9; border-color:#90909A; } .ds-field:focus-visible { border-color:#ADC6FF; outline-color:#294677; } .ds-field::placeholder { color:#C7C5D0; } }"
+    },
+    {
+      "name": "Flow of Funds",
+      "kind": "card",
+      "refersTo": "flow-card",
+      "description": "The signature period summary connecting planned allowance to actual funding.",
+      "html": "<section class=\"ds-flow\"><div class=\"ds-flow-label\">EVERY 2 WEEKS · ACTIVE</div><h3>Oct 27 – Nov 9</h3><div class=\"ds-flow-amounts\"><span><small>PLANNED</small><strong>₱4,000.00</strong></span><b>→</b><span class=\"ds-flow-right\"><small>FUNDED</small><strong>₱3,000.00</strong></span></div><div class=\"ds-flow-track\"><i></i></div><footer>Used ₱1,250.00 <strong>Plan left ₱2,750.00</strong></footer></section>",
+      "css": ".ds-flow { display:grid; gap:16px; border-radius:28px; padding:24px; background:#F0F0F7; color:#1B1B1F; font-family:system-ui,sans-serif; } .ds-flow h3 { margin:0; font-size:22px; line-height:28px; } .ds-flow-label,.ds-flow small { color:#46464F; font-size:12px; font-weight:700; letter-spacing:.7px; } .ds-flow-amounts { display:flex; align-items:center; justify-content:space-between; gap:8px; flex-wrap:wrap; } .ds-flow-amounts span { display:grid; gap:4px; flex:1; } .ds-flow-right { text-align:right; } .ds-flow strong { font:700 20px/28px ui-monospace,monospace; } .ds-flow-track { height:8px; border-radius:4px; overflow:hidden; background:#C6C6D0; } .ds-flow-track i { display:block; width:75%; height:100%; border-radius:4px; background:#435D92; } .ds-flow footer { display:flex; justify-content:space-between; gap:8px; flex-wrap:wrap; color:#46464F; font-size:14px; } .ds-flow footer strong { color:#1B1B1F; font:700 14px system-ui,sans-serif; } @media (prefers-color-scheme:dark) { .ds-flow { background:#1E1F25; color:#E4E1E9; } .ds-flow-label,.ds-flow small,.ds-flow footer { color:#C7C5D0; } .ds-flow-track { background:#46464F; } .ds-flow-track i { background:#ADC6FF; } .ds-flow footer strong { color:#E4E1E9; } }"
+    },
+    {
+      "name": "Budget Group Lane",
+      "kind": "custom",
+      "description": "An open lane that keeps a budget group’s allocation, use, and remaining amount together.",
+      "html": "<section class=\"ds-group-lane\"><div><span><strong>Needs · 50%</strong><small>₱900.00 of ₱2,000.00</small></span><b>₱1,100.00</b></div><div class=\"ds-group-track\"><i></i></div><p>₱200.00 not assigned to a category</p></section>",
+      "css": ".ds-group-lane { display:grid; gap:8px; border-left:5px solid #5375AF; border-bottom:1px solid #C6C6D0; padding:16px; color:#1B1B1F; font-family:system-ui,sans-serif; } .ds-group-lane>div:first-child { display:flex; align-items:center; justify-content:space-between; gap:16px; flex-wrap:wrap; } .ds-group-lane span { display:grid; gap:4px; } .ds-group-lane strong,.ds-group-lane b { font-size:14px; } .ds-group-lane small,.ds-group-lane p { margin:0; color:#46464F; font-size:14px; } .ds-group-track { height:8px; border-radius:4px; overflow:hidden; background:#C6C6D0; } .ds-group-track i { display:block; width:45%; height:100%; border-radius:4px; background:#5375AF; } .ds-group-lane:hover { background:#F0F0F7; } .ds-group-lane:focus-within { outline:3px solid #D9E2FF; } @media (prefers-color-scheme:dark) { .ds-group-lane { color:#E4E1E9; border-left-color:#A9C7FF; border-bottom-color:#46464F; } .ds-group-lane small,.ds-group-lane p { color:#C7C5D0; } .ds-group-track { background:#46464F; } .ds-group-track i { background:#A9C7FF; } .ds-group-lane:hover { background:#1E1F25; } .ds-group-lane:focus-within { outline-color:#294677; } }"
+    },
+    {
+      "name": "Warning Banner",
+      "kind": "custom",
+      "refersTo": "status-warning",
+      "description": "A live, non-blocking warning that states the problem in words.",
+      "html": "<div class=\"ds-warning\" role=\"status\">The split is 95%. It must total exactly 100%.</div>",
+      "css": ".ds-warning { border-radius:12px; padding:16px; background:#FFE08A; color:#2A2100; font:700 14px/20px system-ui,sans-serif; } .ds-warning:hover { filter:brightness(.98); } .ds-warning:focus-visible { outline:3px solid #435D92; outline-offset:2px; } @media (prefers-color-scheme:dark) { .ds-warning { background:#594700; color:#FFE08A; } .ds-warning:focus-visible { outline-color:#ADC6FF; } }"
+    },
+    {
+      "name": "Native Bottom Navigation",
+      "kind": "nav",
+      "description": "Five persistent labeled Android destinations with a tonal selected indicator.",
+      "html": "<nav class=\"ds-tabs\" aria-label=\"Primary\"><a class=\"ds-tab-selected\" href=\"#home\">●<span>Home</span></a><a href=\"#budget\">◔<span>Budget</span></a><a href=\"#activity\">▤<span>Activity</span></a><a href=\"#reports\">▥<span>Reports</span></a><a href=\"#settings\">⚙<span>Settings</span></a></nav>",
+      "css": ".ds-tabs { display:grid; grid-template-columns:repeat(5,1fr); gap:4px; padding:8px 6px; background:#F9F9FF; color:#46464F; font-family:system-ui,sans-serif; } .ds-tabs a { display:grid; justify-items:center; gap:3px; min-height:48px; padding:6px 2px; border-radius:18px; color:inherit; text-decoration:none; font-size:18px; } .ds-tabs span { font-size:10px; } .ds-tabs a:hover { background:#F0F0F7; } .ds-tabs a:active { opacity:.6; } .ds-tabs a:focus-visible { outline:3px solid #435D92; } .ds-tabs .ds-tab-selected { background:#F0F0F7; color:#1B1B1F; } @media (prefers-color-scheme:dark) { .ds-tabs { background:#121318; color:#C7C5D0; } .ds-tabs a:hover,.ds-tabs .ds-tab-selected { background:#1E1F25; } .ds-tabs .ds-tab-selected { color:#E4E1E9; } .ds-tabs a:focus-visible { outline-color:#ADC6FF; } }"
+    },
+    {
+      "name": "Quick Entry Sheet",
+      "kind": "custom",
+      "description": "The focused Home flow for recording an allowance use without leaving context.",
+      "html": "<section class=\"ds-sheet\" role=\"dialog\" aria-labelledby=\"ds-sheet-title\"><header><div><h3 id=\"ds-sheet-title\">Log allowance use</h3><p>Spending and money set aside in Savings both belong here.</p></div><button>Close</button></header><label>AMOUNT<input inputmode=\"decimal\" placeholder=\"₱0.00\"></label><button class=\"ds-sheet-save\">Save allowance use</button></section>",
+      "css": ".ds-sheet { display:grid; gap:16px; border-radius:28px 28px 0 0; padding:24px 24px 64px; background:#F9F9FF; color:#1B1B1F; font-family:system-ui,sans-serif; } .ds-sheet header { display:flex; align-items:flex-start; gap:16px; } .ds-sheet header div { flex:1; } .ds-sheet h3 { margin:0; font-size:22px; line-height:28px; } .ds-sheet p { margin:4px 0 0; color:#46464F; font-size:16px; } .ds-sheet button { min-height:48px; border:1px solid #C6C6D0; border-radius:24px; padding:12px 24px; background:#F0F0F7; color:#1B1B1F; font-weight:700; } .ds-sheet label { display:grid; gap:8px; color:#46464F; font-size:12px; font-weight:700; letter-spacing:.7px; } .ds-sheet input { min-height:52px; border:1px solid #767680; border-radius:12px; padding:8px 16px; background:#F0F0F7; color:#1B1B1F; font-size:16px; } .ds-sheet .ds-sheet-save { background:#435D92; color:#FFFFFF; } .ds-sheet button:hover { filter:brightness(.97); } .ds-sheet button:active { opacity:.55; } .ds-sheet button:focus-visible,.ds-sheet input:focus-visible { outline:3px solid #435D92; outline-offset:2px; } @media (prefers-color-scheme:dark) { .ds-sheet { background:#121318; color:#E4E1E9; } .ds-sheet p,.ds-sheet label { color:#C7C5D0; } .ds-sheet button,.ds-sheet input { background:#1E1F25; color:#E4E1E9; border-color:#46464F; } .ds-sheet .ds-sheet-save { background:#ADC6FF; color:#112F60; } .ds-sheet button:focus-visible,.ds-sheet input:focus-visible { outline-color:#ADC6FF; } }"
+    }
+  ],
+  "narrative": {
+    "northStar": "Flow of Funds",
+    "overview": "Save Your Money is an Android-first operational interface where allowance is shown as a path from plan to funding to use, not as a grid of unrelated metrics. Broad tonal surfaces, crisp dividers, tabular money figures, and compact status language keep the system calm and factual.\n\nThe hierarchy always answers the next money question: what period is active, how much was planned and funded, where Needs, Wants, and Savings stand, and what action is available now. Guidance is direct and non-judgmental; warnings describe discrepancies without blocking truthful entries.",
+    "keyCharacteristics": [
+      "One dominant planned → funded flow per period.",
+      "Three persistent group identities: Needs, Wants, and Savings.",
+      "Flat Material-inspired surfaces with generous touch targets and native navigation.",
+      "Explicit financial language that prevents account money and allowance use from being counted twice.",
+      "Light and dark palettes with the same semantic roles."
+    ],
+    "rules": [
+      { "name": "The One Active Path Rule", "body": "Primary blue is reserved for the current flow, selected state, and primary action; group colors do not compete for general emphasis.", "section": "colors" },
+      { "name": "The Words With Color Rule", "body": "Error, warning, success, and group meaning must remain understandable from labels, values, icons, or structure when color is unavailable.", "section": "colors" },
+      { "name": "The Amount Alignment Rule", "body": "Use the money role for high-value totals and align paired amounts to opposing edges; use small bold text for row-level amounts.", "section": "typography" },
+      { "name": "The Tonal Depth Rule", "body": "Add hierarchy with surface color and spacing before adding elevation. Custom shadows are outside the implemented vocabulary.", "section": "elevation" },
+      { "name": "The No Double-Charge Rule", "body": "Disbursements and returns belong to the user’s account; allowance use, Savings set-asides, refunds, held money, and saved-money use are described as distinct movements.", "section": "components" }
+    ],
+    "dos": [
+      "Do lead period screens with the planned → funded flow before detail.",
+      "Do preserve whole labels, wrapping, safe areas, screen-reader roles/states, polite live regions, and 48dp targets under Android font scaling.",
+      "Do show overspending, missing funding, invalid dates, and unallocated money in factual language without blocking recorded reality.",
+      "Do use native Android tabs, page sheets, alerts, keyboard behavior, and light/dark scheme selection."
+    ],
+    "donts": [
+      "Don't collapse planned, funded, used, returned, held, saved, and remaining money into one ambiguous balance.",
+      "Don't use color alone for warnings, group identity, selection, or status.",
+      "Don't introduce metric-card grids, decorative shadows, or extra accent colors that weaken the flow hierarchy.",
+      "Don't treat current documentation as physical-device sign-off: the code-first system was reviewed against source, but no physical Android device was connected for final visual or interaction verification."
+    ]
+  }
+}

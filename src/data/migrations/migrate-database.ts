@@ -2,7 +2,7 @@ import type { SQLiteDatabase } from 'expo-sqlite';
 
 import { DEFAULT_ACCOUNT_NAMES, STARTER_CATEGORIES } from '@/constants/allowance';
 
-const DATABASE_VERSION = 1;
+const DATABASE_VERSION = 2;
 
 type DatabaseVersionRow = { user_version: number };
 
@@ -26,8 +26,29 @@ export async function migrateDatabase(db: SQLiteDatabase): Promise<void> {
       await seedDefaults(db);
     }
 
+    if (currentVersion < 2) {
+      await createSchemaV2(db);
+    }
+
     await db.execAsync(`PRAGMA user_version = ${DATABASE_VERSION}`);
   });
+}
+
+async function createSchemaV2(db: SQLiteDatabase): Promise<void> {
+  await db.execAsync(`
+    CREATE TABLE leftover_applications (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      source_period_id INTEGER NOT NULL REFERENCES allowance_periods(id),
+      target_period_id INTEGER NOT NULL REFERENCES allowance_periods(id),
+      amount_cents INTEGER NOT NULL CHECK (amount_cents > 0),
+      effective_date TEXT NOT NULL,
+      note TEXT,
+      created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+      CHECK (source_period_id != target_period_id)
+    );
+    CREATE INDEX leftover_applications_source ON leftover_applications(source_period_id);
+    CREATE INDEX leftover_applications_target ON leftover_applications(target_period_id);
+  `);
 }
 
 async function createSchemaV1(db: SQLiteDatabase): Promise<void> {

@@ -74,12 +74,33 @@ export function formatPeriodLabel(startDate: string, endDate: string): string {
   return `${startLabel} – ${endLabel}`;
 }
 
+export function getNextPeriodAnchor(endDate: string): string {
+  const next = parseIsoDate(endDate);
+  next.setUTCDate(next.getUTCDate() + 1);
+  return formatIsoDate(next);
+}
+
+export function isValidIsoDate(value: string): boolean {
+  try {
+    parseIsoDate(value);
+    return true;
+  } catch {
+    return false;
+  }
+}
+
 function parseIsoDate(value: string): Date {
   if (!/^\d{4}-\d{2}-\d{2}$/.test(value)) {
     throw new Error('Use a date in YYYY-MM-DD format.');
   }
 
-  const [year, month, day] = value.split('-').map(Number);
+  const parts = value.split('-').map(Number);
+  const year = parts[0];
+  const month = parts[1];
+  const day = parts[2];
+  if (year === undefined || month === undefined || day === undefined) {
+    throw new Error('Use a date in YYYY-MM-DD format.');
+  }
   const date = new Date(Date.UTC(year, month - 1, day));
   if (
     date.getUTCFullYear() !== year ||

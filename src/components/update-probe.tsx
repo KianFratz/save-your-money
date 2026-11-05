@@ -1,4 +1,4 @@
-import * as SQLite from '';
+import * as SQLite from 'expo-sqlite';
 import { useEffect, useState } from 'react';
 import { Pressable, StyleSheet, TextInput } from 'react-native';
 
