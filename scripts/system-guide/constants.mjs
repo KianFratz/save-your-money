@@ -1,5 +1,6 @@
 export const PROJECT_PACKAGE_NAME = 'save-your-money';
 export const ANDROID_PACKAGE_NAME = 'com.kianfratz.saveyourmoney';
+export const DEVELOPMENT_ANDROID_PACKAGE_NAME = 'com.kianfratz.saveyourmoney.dev';
 
 export const DEFAULT_ADB_EXECUTABLE =
   '/mnt/c/Users/Admin/Downloads/platform-tools-latest-windows/platform-tools/adb.exe';
@@ -25,16 +26,17 @@ export const COMMANDS = Object.freeze({
     description: 'Install the exact dependency versions recorded in package-lock.json.',
     requiresDependencies: false,
   }),
-  startLan: Object.freeze({
+  startDevelopmentLan: Object.freeze({
     command: 'npm',
-    args: Object.freeze(['start']),
-    description: 'Start Expo on the local network for Expo Go or a development build.',
+    args: Object.freeze(['run', 'dev']),
+    description:
+      'Start Metro for Save Your Money Dev on the local network with Fast Refresh enabled.',
     requiresDependencies: true,
   }),
-  startTunnel: Object.freeze({
-    command: 'npx',
-    args: Object.freeze(['expo', 'start', '--tunnel']),
-    description: 'Start Expo through the slower tunnel fallback when LAN discovery fails.',
+  startDevelopmentTunnel: Object.freeze({
+    command: 'npm',
+    args: Object.freeze(['run', 'dev', '--', '--tunnel']),
+    description: 'Start Metro for Save Your Money Dev through the slower tunnel fallback.',
     requiresDependencies: true,
   }),
   typecheck: Object.freeze({
@@ -80,6 +82,19 @@ export const COMMANDS = Object.freeze({
     description: 'Request an Android development-client APK from EAS Build.',
     requiresDependencies: true,
   }),
+  downloadDevelopment: Object.freeze({
+    command: 'npx',
+    args: Object.freeze([
+      'eas-cli@latest',
+      'build:download',
+      '--platform',
+      'android',
+      '--dev-client',
+    ]),
+    description:
+      'Download a finished Android development-client APK; select the build that just completed.',
+    requiresDependencies: true,
+  }),
   buildPreview: Object.freeze({
     command: 'npx',
     args: Object.freeze([
@@ -114,16 +129,65 @@ export const MAIN_MENU_OPTIONS = Object.freeze([
 ]);
 
 export const DEVELOPMENT_MENU_OPTIONS = Object.freeze([
-  Object.freeze({ id: '1', label: 'Start on LAN (recommended)' }),
-  Object.freeze({ id: '2', label: 'Start with the tunnel fallback' }),
-  Object.freeze({ id: '3', label: 'Back to the main menu' }),
+  Object.freeze({ id: '1', label: 'Automated setup and live development' }),
+  Object.freeze({ id: '2', label: 'Start Fast Refresh on LAN (already installed)' }),
+  Object.freeze({ id: '3', label: 'Start Fast Refresh through a tunnel' }),
+  Object.freeze({ id: '4', label: 'Show the complete manual guide' }),
+  Object.freeze({ id: '5', label: 'Back to the main menu' }),
 ]);
 
 export const BUILD_MENU_OPTIONS = Object.freeze([
-  Object.freeze({ id: '1', label: 'Development APK (uses Metro)' }),
+  Object.freeze({ id: '1', label: 'Set up the development APK for Fast Refresh' }),
   Object.freeze({ id: '2', label: 'Build and install a preview APK on the phone' }),
   Object.freeze({ id: '3', label: 'Install an already-downloaded preview APK' }),
   Object.freeze({ id: '4', label: 'Back to the main menu' }),
+]);
+
+export const DEVELOPMENT_WORKFLOW_STAGES = Object.freeze([
+  Object.freeze({
+    title: '1 of 4 - Understand the two installed apps',
+    steps: Object.freeze([
+      'Save Your Money is the standalone preview app and keeps your real data.',
+      'Save Your Money Dev uses com.kianfratz.saveyourmoney.dev and has separate test data.',
+      'Installing or clearing the development app does not replace the standalone preview app.',
+    ]),
+  }),
+  Object.freeze({
+    title: '2 of 4 - Create and install the development APK once',
+    steps: Object.freeze([
+      'Run: npx eas-cli@latest build --platform android --profile development',
+      'Run: npx eas-cli@latest build:download --platform android --dev-client',
+      'Connect and authorize the phone, then run: adb devices -l',
+      'Install without uninstalling: adb install -r PATH_TO_DEVELOPMENT_APK',
+      'Open the phone app named Save Your Money Dev.',
+    ]),
+  }),
+  Object.freeze({
+    title: '3 of 4 - Use Fast Refresh every day',
+    steps: Object.freeze([
+      'Put the computer and phone on the same network.',
+      'From this project in WSL, run: npm run dev',
+      'Open Save Your Money Dev and select the detected server or scan the Metro QR code.',
+      'Keep Metro running; saved JavaScript, TypeScript, and UI changes refresh on the phone.',
+      'If LAN discovery fails, run: npm run dev -- --tunnel',
+    ]),
+  }),
+  Object.freeze({
+    title: '4 of 4 - Know when another APK is required',
+    steps: Object.freeze([
+      'Do not rebuild for ordinary JavaScript, TypeScript, styles, routes, or component changes.',
+      'Rebuild after adding or updating a library with native code.',
+      'Rebuild after changing app.json, app.config.js, native plugins, permissions, icons, or the Expo SDK.',
+      'The standalone preview app never receives Metro changes; build a new preview APK when testing a release.',
+    ]),
+  }),
+]);
+
+export const DEVELOPMENT_SETUP_CHECKPOINTS = Object.freeze([
+  'A separate development package protects the standalone preview app and its data.',
+  'The EAS development APK is a one-time native shell that can be reused for daily code changes.',
+  'The automated flow builds and downloads only when the development app needs installation or rebuilding.',
+  'Metro must remain running while Fast Refresh sends saved code changes to the phone.',
 ]);
 
 export const PREVIEW_UPDATE_CHECKPOINTS = Object.freeze([

@@ -11,7 +11,10 @@ import {
   BUILD_MENU_OPTIONS,
   COMMANDS,
   DEFAULT_ADB_EXECUTABLE,
+  DEVELOPMENT_ANDROID_PACKAGE_NAME,
   DEVELOPMENT_MENU_OPTIONS,
+  DEVELOPMENT_SETUP_CHECKPOINTS,
+  DEVELOPMENT_WORKFLOW_STAGES,
   MAIN_MENU_OPTIONS,
   MINIMUM_NODE_VERSION,
   PROJECT_PACKAGE_NAME,
@@ -35,14 +38,18 @@ export function formatCommand(commandDefinition) {
     .join(' ');
 }
 
-export function toWindowsAdbPath(path) {
+export function toWindowsAdbPath(path, distributionName = process.env.WSL_DISTRO_NAME) {
   const windowsMountMatch = path.match(/^\/mnt\/([a-zA-Z])\/(.+)$/);
-  if (!windowsMountMatch) {
-    return undefined;
+  if (windowsMountMatch) {
+    const [, driveLetter, remainder] = windowsMountMatch;
+    return `${driveLetter.toUpperCase()}:\\${remainder.replaceAll('/', '\\')}`;
   }
 
-  const [, driveLetter, remainder] = windowsMountMatch;
-  return `${driveLetter.toUpperCase()}:\\${remainder.replaceAll('/', '\\')}`;
+  if (distributionName && path.startsWith('/')) {
+    return `\\\\wsl.localhost\\${distributionName}\\${path.slice(1).replaceAll('/', '\\')}`;
+  }
+
+  return undefined;
 }
 
 export function createAdbInstallCommand(adbExecutable, apkPath) {
@@ -56,8 +63,7 @@ export function createAdbInstallCommand(adbExecutable, apkPath) {
   return {
     command: adbExecutable,
     args: ['install', '-r', installPath],
-    description:
-      'Replace the existing Save Your Money package while retaining its application data.',
+    description: 'Install or replace this APK without requesting that Android clear its app data.',
     requiresDependencies: false,
   };
 }
@@ -277,7 +283,7 @@ async function showPrerequisites(projectRoot) {
     `  ${nodeSupported ? 'PASS' : 'FAIL'}  Node.js ${process.versions.node} (minimum ${MINIMUM_NODE_VERSION.major}.${MINIMUM_NODE_VERSION.minor})`,
   );
   console.log(`  ${dependenciesInstalled ? 'PASS' : 'FAIL'}  Project dependencies`);
-  console.log('  MANUAL  Expo Go installed on the Android phone');
+  console.log('  MANUAL  USB debugging enabled when installing a development APK');
   console.log('  MANUAL  Computer and phone connected to the same local network');
 
   if (!projectStatus.valid) {
@@ -298,14 +304,14 @@ async function showPrerequisites(projectRoot) {
 async function runFirstTimeSetup(projectRoot, readline) {
   console.log('\nFirst-time setup');
   console.log('This project has no backend, Docker service, or required environment file.');
-  console.log('After installing dependencies, install Expo Go on the Android phone.');
+  console.log('After installing dependencies, use Daily Android development for phone setup.');
 
   await offerCommand(COMMANDS.installDependencies, projectRoot, readline);
 }
 
 async function runDailyDevelopment(projectRoot, readline) {
-  console.log('\nUse LAN mode while the computer and Android phone share a network.');
-  console.log('Open Expo Go and scan the QR code printed by Expo.');
+  console.log('\nFast Refresh uses the separate Save Your Money Dev app, not Expo Go.');
+  console.log('The standalone Save Your Money app and its data remain separate.');
 
   const choice = await askForMenuChoice(
     readline,
@@ -314,10 +320,14 @@ async function runDailyDevelopment(projectRoot, readline) {
   );
 
   if (choice === '1') {
-    await offerCommand(COMMANDS.startLan, projectRoot, readline);
+    await setupDevelopmentBuild(projectRoot, readline);
   } else if (choice === '2') {
-    await offerCommand(COMMANDS.startTunnel, projectRoot, readline);
-  } else if (choice !== '3') {
+    await offerCommand(COMMANDS.startDevelopmentLan, projectRoot, readline);
+  } else if (choice === '3') {
+    await offerCommand(COMMANDS.startDevelopmentTunnel, projectRoot, readline);
+  } else if (choice === '4') {
+    showDevelopmentManualGuide();
+  } else if (choice !== '5') {
     console.log('Unknown option. Returning to the main menu.');
   }
 }
@@ -363,6 +373,171 @@ function normalizeInputPath(inputPath, projectRoot) {
   return isAbsolute(unquotedPath) ? unquotedPath : resolve(projectRoot, unquotedPath);
 }
 
+function showDevelopmentManualGuide() {
+  console.log('\nManual Fast Refresh guide');
+  console.log(
+    'Official guidance: https://docs.expo.dev/develop/development-builds/use-development-builds/',
+  );
+  console.log('The steps below are instructions only; this option does not run any command.');
+  console.log(`ADB on this computer: ${DEFAULT_ADB_EXECUTABLE}`);
+
+  for (const stage of DEVELOPMENT_WORKFLOW_STAGES) {
+    console.log(`\n${stage.title}`);
+    for (const step of stage.steps) {
+      console.log(`  - ${step}`);
+    }
+  }
+}
+
+async function confirmAuthorizedAdbPhone(projectRoot, readline, adbExecutable) {
+  console.log('\nConnect the phone by USB, enable USB debugging, and approve the phone prompt.');
+  const devicesResult = await offerCommand(
+    createAdbCommand(
+      adbExecutable,
+      ['devices', '-l'],
+      'List connected Android devices and their authorization state.',
+    ),
+    projectRoot,
+    readline,
+  );
+
+  if (devicesResult.status !== 'passed') {
+    console.log('Stopped because the ADB device check did not complete.');
+    return devicesResult;
+  }
+
+  if (
+    !(await askForConfirmation(
+      readline,
+      'Does exactly one intended phone appear above with the state "device"?',
+    ))
+  ) {
+    console.log('Stopped. Fix the USB connection or authorization and try again.');
+    return { status: 'blocked' };
+  }
+
+  return { status: 'passed' };
+}
+
+async function askForApkInstallCommand(projectRoot, readline, adbExecutable, apkKind) {
+  const enteredPath = await readline.question(
+    `\nPath to the downloaded ${apkKind} APK (absolute path or path relative to this project): `,
+  );
+  const apkPath = normalizeInputPath(enteredPath, projectRoot);
+
+  if (extname(apkPath).toLowerCase() !== '.apk' || !(await pathExists(apkPath))) {
+    console.log(`\nAPK not found: ${apkPath}`);
+    return undefined;
+  }
+
+  const installCommand = createAdbInstallCommand(adbExecutable, apkPath);
+  if (!installCommand) {
+    console.log('\nThe Windows adb executable cannot read this APK path.');
+    console.log('Move the APK under /mnt/c, such as the Windows Downloads folder, and try again.');
+    return undefined;
+  }
+
+  return installCommand;
+}
+
+async function installDevelopmentApk(projectRoot, readline) {
+  console.log('\nInstall the separate Save Your Money Dev APK');
+  console.log(`Development package: ${DEVELOPMENT_ANDROID_PACKAGE_NAME}`);
+  console.log(`Standalone package:  ${ANDROID_PACKAGE_NAME}`);
+  console.log('These packages have separate storage, so development test data stays isolated.');
+
+  const adbExecutable = await getAdbExecutable();
+  const phoneResult = await confirmAuthorizedAdbPhone(projectRoot, readline, adbExecutable);
+  if (phoneResult.status !== 'passed') {
+    return phoneResult;
+  }
+
+  const installCommand = await askForApkInstallCommand(
+    projectRoot,
+    readline,
+    adbExecutable,
+    'development',
+  );
+  if (!installCommand) {
+    console.log('Installation stopped. Use the exact path printed by the download command.');
+    return { status: 'blocked' };
+  }
+
+  const installResult = await offerCommand(installCommand, projectRoot, readline);
+  if (installResult.status !== 'passed') {
+    console.log('The development APK was not installed. The standalone app was not removed.');
+    return installResult;
+  }
+
+  const packageResult = await offerCommand(
+    createAdbCommand(
+      adbExecutable,
+      ['shell', 'pm', 'path', DEVELOPMENT_ANDROID_PACKAGE_NAME],
+      'Verify that Android recognizes the separate development package.',
+    ),
+    projectRoot,
+    readline,
+  );
+  if (packageResult.status !== 'passed') {
+    console.log('The APK installed, but package verification is incomplete.');
+    return { status: 'verification-incomplete' };
+  }
+
+  await offerCommand(
+    createAdbCommand(
+      adbExecutable,
+      ['shell', 'am', 'start', '-W', '-n', `${DEVELOPMENT_ANDROID_PACKAGE_NAME}/.MainActivity`],
+      'Open Save Your Money Dev on the connected phone.',
+    ),
+    projectRoot,
+    readline,
+  );
+
+  console.log('\nDevelopment APK installation completed.');
+  return { status: 'passed' };
+}
+
+async function setupDevelopmentBuild(projectRoot, readline) {
+  console.log('\nAutomated development-build setup');
+  for (const checkpoint of DEVELOPMENT_SETUP_CHECKPOINTS) {
+    console.log(`  - ${checkpoint}`);
+  }
+
+  const canReuseInstalledBuild = await askForConfirmation(
+    readline,
+    'Is Save Your Money Dev already installed, with no native dependency or app-config changes since it was built?',
+  );
+
+  if (!canReuseInstalledBuild) {
+    const gitStatusResult = await offerCommand(COMMANDS.gitStatus, projectRoot, readline);
+    if (gitStatusResult.status !== 'passed') {
+      console.log('Setup stopped because the source status was not inspected.');
+      return;
+    }
+
+    const buildResult = await offerCommand(COMMANDS.buildDevelopment, projectRoot, readline);
+    if (buildResult.status !== 'passed') {
+      console.log('Setup stopped because the development APK build did not finish.');
+      return;
+    }
+
+    const downloadResult = await offerCommand(COMMANDS.downloadDevelopment, projectRoot, readline);
+    if (downloadResult.status !== 'passed') {
+      console.log('Setup stopped because a finished development APK was not downloaded.');
+      return;
+    }
+
+    const installResult = await installDevelopmentApk(projectRoot, readline);
+    if (installResult.status !== 'passed') {
+      return;
+    }
+  }
+
+  console.log('\nDaily loop: keep Metro open, edit code, and save to refresh the phone.');
+  console.log('Open Save Your Money Dev and select the detected server or scan the QR code.');
+  await offerCommand(COMMANDS.startDevelopmentLan, projectRoot, readline);
+}
+
 async function installPreviewApk(projectRoot, readline) {
   console.log('\nInstall a signed preview APK on the physical phone');
   console.log('Official guidance: https://docs.expo.dev/build-reference/apk/');
@@ -379,50 +554,21 @@ async function installPreviewApk(projectRoot, readline) {
     return { status: 'blocked' };
   }
 
-  const enteredPath = await readline.question(
-    '\nPath to the downloaded APK (for example /mnt/c/Users/Admin/Downloads/app.apk): ',
+  const adbExecutable = await getAdbExecutable();
+  const installCommand = await askForApkInstallCommand(
+    projectRoot,
+    readline,
+    adbExecutable,
+    'preview',
   );
-  const apkPath = normalizeInputPath(enteredPath, projectRoot);
-
-  if (extname(apkPath).toLowerCase() !== '.apk' || !(await pathExists(apkPath))) {
-    console.log(`\nAPK not found: ${apkPath}`);
+  if (!installCommand) {
     console.log('Download the finished preview artifact from the EAS build page and try again.');
     return { status: 'blocked' };
   }
 
-  const adbExecutable = await getAdbExecutable();
-  const installCommand = createAdbInstallCommand(adbExecutable, apkPath);
-
-  if (!installCommand) {
-    console.log('\nThe Windows adb executable cannot read this WSL-only APK path.');
-    console.log('Move the APK under /mnt/c, such as the Windows Downloads folder, and try again.');
-    return { status: 'blocked' };
-  }
-
-  console.log('\nConnect the phone by USB, enable USB debugging, and approve the phone prompt.');
-  const devicesResult = await offerCommand(
-    createAdbCommand(
-      adbExecutable,
-      ['devices', '-l'],
-      'List connected Android devices and their authorization state.',
-    ),
-    projectRoot,
-    readline,
-  );
-
-  if (devicesResult.status !== 'passed') {
-    console.log('Update stopped because the ADB device check did not complete.');
-    return devicesResult;
-  }
-
-  if (
-    !(await askForConfirmation(
-      readline,
-      'Does exactly one intended phone appear above with the state "device"?',
-    ))
-  ) {
-    console.log('Update stopped. Fix the USB connection or authorization and try again.');
-    return { status: 'blocked' };
+  const phoneResult = await confirmAuthorizedAdbPhone(projectRoot, readline, adbExecutable);
+  if (phoneResult.status !== 'passed') {
+    return phoneResult;
   }
 
   console.log('\nRecord the current versionCode, dataDir, and firstInstallTime shown below.');
@@ -545,13 +691,13 @@ async function buildAndInstallPreview(projectRoot, readline) {
 async function runAndroidBuild(projectRoot, readline) {
   console.log('\nEAS Android builds require an Expo account, network access, and EAS credentials.');
   console.log(
-    'The development profile uses Metro; the preview profile is a standalone signed APK.',
+    'The separate development app uses Metro; the preview app is a standalone signed APK.',
   );
 
   const choice = await askForMenuChoice(readline, 'Android APK builds', BUILD_MENU_OPTIONS);
 
   if (choice === '1') {
-    await offerCommand(COMMANDS.buildDevelopment, projectRoot, readline);
+    await setupDevelopmentBuild(projectRoot, readline);
   } else if (choice === '2') {
     await buildAndInstallPreview(projectRoot, readline);
   } else if (choice === '3') {

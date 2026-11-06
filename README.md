@@ -31,10 +31,22 @@ Run the Android-first guide from the project root:
 npm run guide
 ```
 
-The guide checks local prerequisites and walks through first-time setup, Expo Go development,
-quality checks, EAS development builds, and a signed preview workflow that can install an APK on a
-connected physical phone without intentionally clearing its app data. It also includes the existing
-release/recovery checklist and shows every executable command before asking for confirmation.
+The guide checks local prerequisites and offers both automated and manual Fast Refresh setup for a
+physical Android phone. It installs a separate **Save Your Money Dev** app so daily code changes can
+refresh through Metro without replacing the standalone app or sharing its data. The same guide also
+covers quality checks and a signed preview workflow that can install an APK without intentionally
+clearing existing app data. Every executable command is shown before confirmation.
+
+For daily development after the development APK is installed, run the guide and choose **Daily
+Android development → Start Fast Refresh on LAN**, or run:
+
+```bash
+npm run dev
+```
+
+Keep Metro running and open **Save Your Money Dev** on the phone. Ordinary JavaScript, TypeScript,
+style, route, and component changes refresh without another EAS build. Rebuild the development APK
+after native dependency, app configuration, plugin, permission, icon, or Expo SDK changes.
 
 ## Quality checks
 

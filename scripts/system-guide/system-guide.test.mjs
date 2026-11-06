@@ -1,6 +1,7 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
 
+import createAppConfig from '../../app.config.js';
 import { COMMANDS, DEFAULT_ADB_EXECUTABLE, QUALITY_CHECK_COMMANDS } from './constants.mjs';
 import {
   createAdbInstallCommand,
@@ -35,7 +36,40 @@ test('converts a Windows-mounted WSL APK path for Windows adb', () => {
     toWindowsAdbPath('/mnt/c/Users/Admin/Downloads/Save Your Money.apk'),
     'C:\\Users\\Admin\\Downloads\\Save Your Money.apk',
   );
-  assert.equal(toWindowsAdbPath('/tmp/save-your-money.apk'), undefined);
+  assert.equal(toWindowsAdbPath('/tmp/save-your-money.apk', null), undefined);
+  assert.equal(
+    toWindowsAdbPath('/home/kianfratz/save-your-money/dev.apk', 'Ubuntu'),
+    '\\\\wsl.localhost\\Ubuntu\\home\\kianfratz\\save-your-money\\dev.apk',
+  );
+});
+
+test('uses a separate Android identity for the development build', () => {
+  const originalVariant = process.env.APP_VARIANT;
+  const baseConfig = {
+    name: 'Save Your Money',
+    scheme: 'saveyourmoney',
+    android: { package: 'com.kianfratz.saveyourmoney' },
+  };
+
+  try {
+    process.env.APP_VARIANT = 'development';
+    const developmentConfig = createAppConfig({ config: baseConfig });
+    assert.equal(developmentConfig.name, 'Save Your Money Dev');
+    assert.equal(developmentConfig.scheme, 'saveyourmoney-dev');
+    assert.equal(developmentConfig.android.package, 'com.kianfratz.saveyourmoney.dev');
+
+    delete process.env.APP_VARIANT;
+    const standaloneConfig = createAppConfig({ config: baseConfig });
+    assert.equal(standaloneConfig.name, 'Save Your Money');
+    assert.equal(standaloneConfig.scheme, 'saveyourmoney');
+    assert.equal(standaloneConfig.android.package, 'com.kianfratz.saveyourmoney');
+  } finally {
+    if (originalVariant === undefined) {
+      delete process.env.APP_VARIANT;
+    } else {
+      process.env.APP_VARIANT = originalVariant;
+    }
+  }
 });
 
 test('creates a data-preserving in-place APK installation command', () => {
@@ -81,6 +115,15 @@ test('runs the complete quality gate in the documented order', () => {
   assert.deepEqual(
     QUALITY_CHECK_COMMANDS.map(({ command }) => formatCommand(command)),
     ['npm run typecheck', 'npm run lint', 'npm run format:check', 'npm test', 'npm run test:guide'],
+  );
+});
+
+test('targets the development variant when starting Metro', () => {
+  assert.equal(formatCommand(COMMANDS.startDevelopmentLan), 'npm run dev');
+  assert.equal(formatCommand(COMMANDS.startDevelopmentTunnel), 'npm run dev -- --tunnel');
+  assert.equal(
+    formatCommand(COMMANDS.downloadDevelopment),
+    'npx eas-cli@latest build:download --platform android --dev-client',
   );
 });
 
