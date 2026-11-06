@@ -1,12 +1,14 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
 
-import { COMMANDS, QUALITY_CHECK_COMMANDS } from './constants.mjs';
+import { COMMANDS, DEFAULT_ADB_EXECUTABLE, QUALITY_CHECK_COMMANDS } from './constants.mjs';
 import {
+  createAdbInstallCommand,
   formatCommand,
   hasExpectedPackageName,
   interruptChildProcess,
   isNodeVersionSupported,
+  toWindowsAdbPath,
 } from '../system-guide.mjs';
 
 test('accepts the Expo SDK 57 minimum Node.js version and newer versions', () => {
@@ -28,6 +30,32 @@ test('formats the exact command shown before execution', () => {
   );
 });
 
+test('converts a Windows-mounted WSL APK path for Windows adb', () => {
+  assert.equal(
+    toWindowsAdbPath('/mnt/c/Users/Admin/Downloads/Save Your Money.apk'),
+    'C:\\Users\\Admin\\Downloads\\Save Your Money.apk',
+  );
+  assert.equal(toWindowsAdbPath('/tmp/save-your-money.apk'), undefined);
+});
+
+test('creates a data-preserving in-place APK installation command', () => {
+  const command = createAdbInstallCommand(
+    DEFAULT_ADB_EXECUTABLE,
+    '/mnt/c/Users/Admin/Downloads/Save Your Money.apk',
+  );
+
+  assert.ok(command);
+  assert.deepEqual(command.args, [
+    'install',
+    '-r',
+    'C:\\Users\\Admin\\Downloads\\Save Your Money.apk',
+  ]);
+  assert.equal(
+    formatCommand(command),
+    `${DEFAULT_ADB_EXECUTABLE} install -r 'C:\\Users\\Admin\\Downloads\\Save Your Money.apk'`,
+  );
+});
+
 test('keeps destructive and production commands out of the supported command set', () => {
   const supportedCommands = Object.values(COMMANDS).map(formatCommand);
 
@@ -37,6 +65,14 @@ test('keeps destructive and production commands out of the supported command set
   );
   assert.equal(
     supportedCommands.some((command) => command.includes('--profile production')),
+    false,
+  );
+  assert.equal(
+    supportedCommands.some((command) => command.includes('uninstall')),
+    false,
+  );
+  assert.equal(
+    supportedCommands.some((command) => command.includes('pm clear')),
     false,
   );
 });

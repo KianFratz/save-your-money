@@ -2,17 +2,20 @@
 
 import { spawn } from 'node:child_process';
 import { access, readFile } from 'node:fs/promises';
-import { join } from 'node:path';
+import { extname, isAbsolute, join, resolve } from 'node:path';
 import { createInterface } from 'node:readline/promises';
 import { pathToFileURL } from 'node:url';
 
 import {
+  ANDROID_PACKAGE_NAME,
   BUILD_MENU_OPTIONS,
   COMMANDS,
+  DEFAULT_ADB_EXECUTABLE,
   DEVELOPMENT_MENU_OPTIONS,
   MAIN_MENU_OPTIONS,
   MINIMUM_NODE_VERSION,
   PROJECT_PACKAGE_NAME,
+  PREVIEW_UPDATE_CHECKPOINTS,
   QUALITY_CHECK_COMMANDS,
   RELEASE_CHECKLIST_PATH,
   RELEASE_CHECKPOINTS,
@@ -21,7 +24,42 @@ import {
 const DEPENDENCY_MARKER_PATH = 'node_modules/expo/package.json';
 
 export function formatCommand(commandDefinition) {
-  return [commandDefinition.command, ...commandDefinition.args].join(' ');
+  return [commandDefinition.command, ...commandDefinition.args]
+    .map((argument) => {
+      if (!/\s/.test(argument)) {
+        return argument;
+      }
+
+      return `'${argument.replaceAll("'", "'\\''")}'`;
+    })
+    .join(' ');
+}
+
+export function toWindowsAdbPath(path) {
+  const windowsMountMatch = path.match(/^\/mnt\/([a-zA-Z])\/(.+)$/);
+  if (!windowsMountMatch) {
+    return undefined;
+  }
+
+  const [, driveLetter, remainder] = windowsMountMatch;
+  return `${driveLetter.toUpperCase()}:\\${remainder.replaceAll('/', '\\')}`;
+}
+
+export function createAdbInstallCommand(adbExecutable, apkPath) {
+  const usesWindowsAdb = adbExecutable.toLowerCase().endsWith('.exe');
+  const installPath = usesWindowsAdb ? toWindowsAdbPath(apkPath) : apkPath;
+
+  if (!installPath) {
+    return undefined;
+  }
+
+  return {
+    command: adbExecutable,
+    args: ['install', '-r', installPath],
+    description:
+      'Replace the existing Save Your Money package while retaining its application data.',
+    requiresDependencies: false,
+  };
 }
 
 export function isNodeVersionSupported(version, minimumVersion = MINIMUM_NODE_VERSION) {
@@ -299,6 +337,209 @@ async function runQualityChecks(projectRoot, readline) {
     const detail = result.detail ? ` (${result.detail})` : '';
     console.log(`  ${result.status.toUpperCase().padEnd(11)} ${result.label}${detail}`);
   }
+
+  return results;
+}
+
+function createAdbCommand(adbExecutable, args, description) {
+  return {
+    command: adbExecutable,
+    args,
+    description,
+    requiresDependencies: false,
+  };
+}
+
+async function getAdbExecutable() {
+  if (await pathExists(DEFAULT_ADB_EXECUTABLE)) {
+    return DEFAULT_ADB_EXECUTABLE;
+  }
+
+  return 'adb';
+}
+
+function normalizeInputPath(inputPath, projectRoot) {
+  const unquotedPath = inputPath.trim().replace(/^(?:'(.+)'|"(.+)")$/, '$1$2');
+  return isAbsolute(unquotedPath) ? unquotedPath : resolve(projectRoot, unquotedPath);
+}
+
+async function installPreviewApk(projectRoot, readline) {
+  console.log('\nInstall a signed preview APK on the physical phone');
+  console.log('Official guidance: https://docs.expo.dev/build-reference/apk/');
+  console.log('Android documents that adb install -r keeps the existing application data.');
+  console.log('Do not uninstall Save Your Money and do not clear its storage.');
+
+  if (
+    !(await askForConfirmation(
+      readline,
+      'Have you backed up important app data, or confirmed there is no data you need to preserve?',
+    ))
+  ) {
+    console.log('Update stopped. Protect important data before continuing.');
+    return { status: 'blocked' };
+  }
+
+  const enteredPath = await readline.question(
+    '\nPath to the downloaded APK (for example /mnt/c/Users/Admin/Downloads/app.apk): ',
+  );
+  const apkPath = normalizeInputPath(enteredPath, projectRoot);
+
+  if (extname(apkPath).toLowerCase() !== '.apk' || !(await pathExists(apkPath))) {
+    console.log(`\nAPK not found: ${apkPath}`);
+    console.log('Download the finished preview artifact from the EAS build page and try again.');
+    return { status: 'blocked' };
+  }
+
+  const adbExecutable = await getAdbExecutable();
+  const installCommand = createAdbInstallCommand(adbExecutable, apkPath);
+
+  if (!installCommand) {
+    console.log('\nThe Windows adb executable cannot read this WSL-only APK path.');
+    console.log('Move the APK under /mnt/c, such as the Windows Downloads folder, and try again.');
+    return { status: 'blocked' };
+  }
+
+  console.log('\nConnect the phone by USB, enable USB debugging, and approve the phone prompt.');
+  const devicesResult = await offerCommand(
+    createAdbCommand(
+      adbExecutable,
+      ['devices', '-l'],
+      'List connected Android devices and their authorization state.',
+    ),
+    projectRoot,
+    readline,
+  );
+
+  if (devicesResult.status !== 'passed') {
+    console.log('Update stopped because the ADB device check did not complete.');
+    return devicesResult;
+  }
+
+  if (
+    !(await askForConfirmation(
+      readline,
+      'Does exactly one intended phone appear above with the state "device"?',
+    ))
+  ) {
+    console.log('Update stopped. Fix the USB connection or authorization and try again.');
+    return { status: 'blocked' };
+  }
+
+  console.log('\nRecord the current versionCode, dataDir, and firstInstallTime shown below.');
+  const beforeInspectionResult = await offerCommand(
+    createAdbCommand(
+      adbExecutable,
+      ['shell', 'dumpsys', 'package', ANDROID_PACKAGE_NAME],
+      'Inspect the currently installed Save Your Money package before updating it.',
+    ),
+    projectRoot,
+    readline,
+  );
+
+  if (beforeInspectionResult.status !== 'passed') {
+    console.log('Update stopped because the installed-package baseline was not recorded.');
+    return beforeInspectionResult;
+  }
+
+  const installResult = await offerCommand(installCommand, projectRoot, readline);
+  if (installResult.status !== 'passed') {
+    console.log('The APK was not installed. The existing app has not been intentionally removed.');
+    return installResult;
+  }
+
+  console.log(
+    '\nVerify that versionCode increased while dataDir and firstInstallTime stayed the same.',
+  );
+  const afterInspectionResult = await offerCommand(
+    createAdbCommand(
+      adbExecutable,
+      ['shell', 'dumpsys', 'package', ANDROID_PACKAGE_NAME],
+      'Inspect the installed Save Your Money package after the update.',
+    ),
+    projectRoot,
+    readline,
+  );
+
+  const launchResult = await offerCommand(
+    createAdbCommand(
+      adbExecutable,
+      ['shell', 'am', 'start', '-W', '-n', `${ANDROID_PACKAGE_NAME}/.MainActivity`],
+      'Cold-launch the updated application and wait for Android to report the result.',
+    ),
+    projectRoot,
+    readline,
+  );
+
+  if (afterInspectionResult.status !== 'passed' || launchResult.status !== 'passed') {
+    console.log('\nThe APK was installed, but the post-install verification is incomplete.');
+    console.log('Run the install-existing-APK workflow again and complete the verification steps.');
+    return { status: 'verification-incomplete' };
+  }
+
+  console.log(
+    '\nOpen the app and confirm that the expected data and latest interface are present.',
+  );
+  console.log('Do not expose private financial data in terminal output, screenshots, or logs.');
+
+  if (
+    !(await askForConfirmation(readline, 'Does the updated app look correct and retain its data?'))
+  ) {
+    console.log(
+      'Verification is incomplete. Stop entering new data and follow the recovery checklist.',
+    );
+    return { status: 'verification-incomplete' };
+  }
+
+  console.log('\nPreview APK update completed and manually verified.');
+
+  return { status: 'passed' };
+}
+
+async function buildAndInstallPreview(projectRoot, readline) {
+  console.log('\nSigned preview update workflow');
+  for (const checkpoint of PREVIEW_UPDATE_CHECKPOINTS) {
+    console.log(`  - ${checkpoint}`);
+  }
+
+  const gitStatusResult = await offerCommand(COMMANDS.gitStatus, projectRoot, readline);
+  if (gitStatusResult.status !== 'passed') {
+    console.log('Build stopped because the source status was not inspected.');
+    return;
+  }
+
+  if (
+    !(await askForConfirmation(readline, 'Is the intended source committed and ready to build?'))
+  ) {
+    console.log('Build stopped. Commit or preserve the intended source before continuing.');
+    return;
+  }
+
+  console.log('\nFirst, run the complete quality gate. Every check must pass.');
+  const qualityResults = await runQualityChecks(projectRoot, readline);
+  if (!qualityResults.every((result) => result.status === 'passed')) {
+    console.log('\nBuild stopped because every quality check did not pass.');
+    return;
+  }
+
+  const buildResult = await offerCommand(COMMANDS.buildPreview, projectRoot, readline);
+  if (buildResult.status !== 'passed') {
+    console.log(
+      'Installation was not started because the EAS build did not complete successfully.',
+    );
+    return;
+  }
+
+  console.log('\nDownload the finished .apk from the EAS build link printed above.');
+  console.log('Save it in the Windows Downloads folder so Windows adb can read it from WSL.');
+
+  if (!(await askForConfirmation(readline, 'Has the finished APK been downloaded?'))) {
+    console.log(
+      'Return to this menu and choose the install-existing-APK option after downloading it.',
+    );
+    return;
+  }
+
+  await installPreviewApk(projectRoot, readline);
 }
 
 async function runAndroidBuild(projectRoot, readline) {
@@ -312,8 +553,10 @@ async function runAndroidBuild(projectRoot, readline) {
   if (choice === '1') {
     await offerCommand(COMMANDS.buildDevelopment, projectRoot, readline);
   } else if (choice === '2') {
-    await offerCommand(COMMANDS.buildPreview, projectRoot, readline);
-  } else if (choice !== '3') {
+    await buildAndInstallPreview(projectRoot, readline);
+  } else if (choice === '3') {
+    await installPreviewApk(projectRoot, readline);
+  } else if (choice !== '4') {
     console.log('Unknown option. Returning to the main menu.');
   }
 }

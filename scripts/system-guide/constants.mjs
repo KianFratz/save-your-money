@@ -1,4 +1,8 @@
 export const PROJECT_PACKAGE_NAME = 'save-your-money';
+export const ANDROID_PACKAGE_NAME = 'com.kianfratz.saveyourmoney';
+
+export const DEFAULT_ADB_EXECUTABLE =
+  '/mnt/c/Users/Admin/Downloads/platform-tools-latest-windows/platform-tools/adb.exe';
 
 export const MINIMUM_NODE_VERSION = Object.freeze({
   major: 22,
@@ -9,6 +13,12 @@ export const MINIMUM_NODE_VERSION = Object.freeze({
 export const RELEASE_CHECKLIST_PATH = 'docs/RELEASE_RECOVERY_CHECKLIST.md';
 
 export const COMMANDS = Object.freeze({
+  gitStatus: Object.freeze({
+    command: 'git',
+    args: Object.freeze(['status', '--short']),
+    description: 'Show uncommitted files so you can confirm exactly what EAS will archive.',
+    requiresDependencies: false,
+  }),
   installDependencies: Object.freeze({
     command: 'npm',
     args: Object.freeze(['ci']),
@@ -98,7 +108,7 @@ export const MAIN_MENU_OPTIONS = Object.freeze([
   Object.freeze({ id: '2', label: 'First-time setup' }),
   Object.freeze({ id: '3', label: 'Daily Android development' }),
   Object.freeze({ id: '4', label: 'Run quality checks' }),
-  Object.freeze({ id: '5', label: 'Build an Android APK with EAS' }),
+  Object.freeze({ id: '5', label: 'Build and install an Android APK' }),
   Object.freeze({ id: '6', label: 'Review release and recovery guidance' }),
   Object.freeze({ id: '7', label: 'Exit' }),
 ]);
@@ -111,8 +121,19 @@ export const DEVELOPMENT_MENU_OPTIONS = Object.freeze([
 
 export const BUILD_MENU_OPTIONS = Object.freeze([
   Object.freeze({ id: '1', label: 'Development APK (uses Metro)' }),
-  Object.freeze({ id: '2', label: 'Preview APK (standalone and signed)' }),
-  Object.freeze({ id: '3', label: 'Back to the main menu' }),
+  Object.freeze({ id: '2', label: 'Build and install a preview APK on the phone' }),
+  Object.freeze({ id: '3', label: 'Install an already-downloaded preview APK' }),
+  Object.freeze({ id: '4', label: 'Back to the main menu' }),
+]);
+
+export const PREVIEW_UPDATE_CHECKPOINTS = Object.freeze([
+  'Commit the exact source you intend to build so the EAS record identifies it clearly.',
+  'Pass every automated quality check before requesting the APK.',
+  'Create and verify an external app backup before updating important phone data.',
+  'Keep the Android package com.kianfratz.saveyourmoney and the established signing credential.',
+  'Use a version code higher than the version already installed on the phone.',
+  'Install with adb install -r; never uninstall or clear app data for an in-place update.',
+  'Verify the new version, retained data, and a successful launch after installation.',
 ]);
 
 export const RELEASE_CHECKPOINTS = Object.freeze([

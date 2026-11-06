@@ -32,8 +32,9 @@ npm run guide
 ```
 
 The guide checks local prerequisites and walks through first-time setup, Expo Go development,
-quality checks, EAS development and preview APKs, and the existing release/recovery checklist. It
-shows and explains every executable command before asking for confirmation.
+quality checks, EAS development builds, and a signed preview workflow that can install an APK on a
+connected physical phone without intentionally clearing its app data. It also includes the existing
+release/recovery checklist and shows every executable command before asking for confirmation.
 
 ## Quality checks
 
