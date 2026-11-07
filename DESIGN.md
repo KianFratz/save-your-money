@@ -1,6 +1,6 @@
 ---
 name: Save Your Money — Flow of Funds
-description: A calm Android money planner that makes planned, funded, used, saved, returned, and remaining allowance visibly distinct.
+description: A calm Android budget tracker that makes received, spent, saved, and remaining money visibly distinct.
 colors:
   light-text: "#1B1B1F"
   light-background: "#F9F9FF"
@@ -80,7 +80,7 @@ rounded:
   field: "12px"
   surface: "16px"
   pill: "24px"
-  flow: "28px"
+  flow: "16px"
 spacing:
   half: "2px"
   one: "4px"
@@ -144,16 +144,16 @@ components:
 
 **Creative North Star: "Flow of Funds"**
 
-Save Your Money is an Android-first operational interface where allowance is shown as a path from plan to funding to use, not as a grid of unrelated metrics. Broad tonal surfaces, crisp dividers, tabular money figures, and compact status language keep the system calm and factual.
+Save Your Money is an Android-first operational interface where each received amount becomes an independent Budget card and a clear path from allocation to spending. Broad tonal surfaces, crisp dividers, tabular money figures, and compact status language keep the system calm and factual.
 
-The hierarchy always answers the next money question: what period is active, how much was planned and funded, where Needs, Wants, and Savings stand, and what action is available now. Guidance is direct and non-judgmental; warnings describe discrepancies without blocking truthful entries.
+The hierarchy always answers the next money question: which Budgets are current, how much remains, where Needs, Wants, and Savings stand, and what action is available now. Guidance is direct and non-judgmental; warnings describe discrepancies without blocking truthful entries.
 
 **Key Characteristics:**
 
-- One dominant planned → funded flow per period.
+- Compact Budget cards grouped as Current, Upcoming, Past, or Archived.
 - Three persistent group identities: Needs, Wants, and Savings.
 - Flat Material-inspired surfaces with generous touch targets and native navigation.
-- Explicit financial language that prevents account money and allowance use from being counted twice.
+- Explicit financial language that keeps expenditures attached to one Budget.
 - Light and dark palettes with the same semantic roles.
 
 ## Colors
@@ -208,7 +208,7 @@ Screens use a single scrolling column with a maximum content width of 800dp, 24d
 
 Flow rows, lane headers, chips, and summaries wrap instead of clipping. The same structure therefore serves narrow phones, larger Android windows, and increased font sizes. React Native text keeps platform font scaling enabled; do not fix text containers to single-line heights. Controls retain at least 48dp touch height, while fields use 52dp.
 
-The five labeled native destinations remain Home, Budget, Activity, Reports, and Settings. Home prioritizes the live flow; Budget owns plan creation and category allocation; Activity owns the complete ledger; Reports compares periods; Settings manages local accounts and categories.
+The five labeled native destinations remain Home, Budget, Activity, Reports, and Settings. Home aggregates current Budgets; Budget owns creation, detail, and category allocation; Activity owns the complete ledger; Reports inspects one selected Budget; Settings manages categories.
 
 ## Elevation & Depth
 
@@ -218,7 +218,7 @@ The system is flat by default and defines no custom shadows. Depth comes from to
 
 ## Shapes
 
-Shapes move from compact to expressive with purpose: 4dp progress tracks, 8dp compact actions, 12dp fields and banners, 16dp state/history surfaces, 24dp pill controls, and a 28dp Flow of Funds card. Group lanes stay mostly open, using a 5dp colored left rail and a hairline bottom divider instead of card outlines.
+Shapes move from compact to expressive with purpose: 4dp progress tracks, 8dp compact actions, 12dp fields and banners, 16dp Budget/state surfaces, and 24dp pill controls. Group lanes stay mostly open, using a small color marker and a hairline bottom divider instead of card outlines.
 
 Pills belong to actions and choices; large rounded surfaces belong to period-level summaries. Do not turn every row into a floating card.
 
@@ -237,7 +237,7 @@ Choice chips form labeled radio groups. They wrap with 8dp gaps, retain a 48dp m
 
 ### Cards / Containers
 
-The signature Flow of Funds container shows cadence and state, period dates, Planned → Funded amounts, a progress track, then Net newly given, Used, Returned when present, Held by sister, and Plan left. Group lanes follow it with allocation, use, remaining, unallocated category money, and explicit 80%/over-plan messages.
+The signature Budget card shows cadence, date range, derived timing, received amount, spent amount, remaining amount, and a progress track. Detail screens add Needs, Wants, and Savings lanes with allocation, spending, remaining, unallocated category money, and explicit 80%/over-plan messages.
 
 ### Inputs / Fields
 
@@ -249,26 +249,26 @@ Use the platform-native labeled bottom tabs with Material icons. Android labels 
 
 ### Status and State Patterns
 
-Status banners use semantic containers plus concise text and a polite live region. Empty, loading, validation, warning, recoverable-error, and unrecoverable-error states use a neutral 16dp container, an explicit state label, a heading, supporting copy, and an optional 48dp action. Draft, active, and closed period states are written in text; destructive transitions use native confirmation.
+Status banners use semantic containers plus concise text and a polite live region. Empty, loading, validation, warning, recoverable-error, and unrecoverable-error states use a neutral 16dp container, an explicit state label, a heading, supporting copy, and an optional 48dp action. Current, Upcoming, Past, and Archived states are written in text; destructive transitions use native confirmation.
 
 ### Modal Quick Entry
 
-“Log allowance use” opens as a sliding native page sheet with its own safe area and scroll container. The header keeps title and explanation beside a secondary Close action; the sequence is Amount, searchable Category, optional Note, then Save. Keyboard drag dismissal and persistent taps keep the form usable during search and entry.
+“Add expenditure” opens as a sliding native page sheet with its own safe area and scroll container. The header keeps title and explanation beside a secondary Close action; the sequence is record type, Budget when needed, category, amount, date, optional description, then Save. Keyboard drag dismissal and persistent taps keep the form usable during entry.
 
-**The No Double-Charge Rule.** Disbursements and returns belong to the user’s account; allowance use, Savings set-asides, refunds, held money, and saved-money use are described as distinct movements.
+**The One Budget Rule.** Every expenditure and refund belongs to exactly one Budget; a Savings withdrawal is periodless and reduces the chosen Savings category’s cumulative balance.
 
 ## Do's and Don'ts
 
 ### Do:
 
-- **Do** lead period screens with the planned → funded flow before detail.
+- **Do** lead Budget screens with received, spent, and remaining before allocation detail.
 - **Do** preserve whole labels, wrapping, safe areas, screen-reader roles/states, polite live regions, and 48dp targets under Android font scaling.
-- **Do** show overspending, missing funding, invalid dates, and unallocated money in factual language without blocking recorded reality.
+- **Do** show overspending, invalid dates, and unallocated money in factual language without blocking recorded reality.
 - **Do** use native Android tabs, page sheets, alerts, keyboard behavior, and light/dark scheme selection.
 
 ### Don't:
 
-- **Don't** collapse planned, funded, used, returned, held, saved, and remaining money into one ambiguous balance.
+- **Don't** collapse received, spent, saved, and remaining money into one ambiguous balance.
 - **Don't** use color alone for warnings, group identity, selection, or status.
 - **Don't** introduce metric-card grids, decorative shadows, or extra accent colors that weaken the flow hierarchy.
-- **Don't** treat current documentation as physical-device sign-off: the code-first system was reviewed against source, but no physical Android device was connected for final visual or interaction verification.
+- **Don't** hide historical Budgets by deleting their records; use archive and restore.

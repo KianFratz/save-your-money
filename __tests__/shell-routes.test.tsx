@@ -3,11 +3,11 @@ import { fireEvent, renderRouter, screen } from 'expo-router/testing-library';
 import type { PropsWithChildren } from 'react';
 
 import TabLayout from '@/app/_layout';
-import BudgetScreen from '@/app/budget';
+import BudgetScreen from '@/app/budget/index';
 import HomeScreen from '@/app/index';
 import ReportsScreen from '@/app/reports';
 import SettingsScreen from '@/app/settings';
-import TransactionsScreen from '@/app/transactions';
+import ActivityScreen from '@/app/transactions';
 import WebTabs from '@/components/app-tabs.web';
 import { StateMessage } from '@/components/state-message';
 
@@ -15,31 +15,26 @@ jest.mock('expo-sqlite', () => ({
   SQLiteProvider: ({ children }: PropsWithChildren) => children,
 }));
 
-jest.mock('@/features/allowance/allowance-data-provider', () => ({
-  AllowanceDataProvider: ({ children }: PropsWithChildren) => children,
-  useClearAllowanceErrorOnBlur: jest.fn(),
-  useAllowanceData: () => ({
-    snapshot: {
-      activePeriod: null,
-      draftPeriod: null,
-      recentEvents: [],
-      accounts: [],
-      categories: [],
-      periods: [],
-    },
+const emptySnapshot = { budgets: [], records: [], categories: [] };
+
+jest.mock('@/features/budget/budget-data-provider', () => ({
+  BudgetDataProvider: ({ children }: PropsWithChildren) => children,
+  useClearBudgetErrorOnBlur: jest.fn(),
+  useBudgetData: () => ({
+    snapshot: emptySnapshot,
     isLoading: false,
     isSaving: false,
     errorMessage: null,
     refresh: jest.fn(),
     clearError: jest.fn(),
-    createDraft: jest.fn(),
-    activate: jest.fn(),
-    close: jest.fn(),
-    reopen: jest.fn(),
-    setCategoryAllocation: jest.fn(),
-    recordEvent: jest.fn(),
-    applyLeftover: jest.fn(),
-    createAccount: jest.fn(),
+    create: jest.fn(),
+    update: jest.fn(),
+    setAllocation: jest.fn(),
+    archive: jest.fn(),
+    restore: jest.fn(),
+    removeEmpty: jest.fn(),
+    saveRecord: jest.fn(),
+    removeRecord: jest.fn(),
     createCategory: jest.fn(),
   }),
 }));
@@ -47,15 +42,15 @@ jest.mock('@/features/allowance/allowance-data-provider', () => ({
 const routes = {
   _layout: TabLayout,
   index: HomeScreen,
-  budget: BudgetScreen,
-  transactions: TransactionsScreen,
+  'budget/index': BudgetScreen,
+  transactions: ActivityScreen,
   reports: ReportsScreen,
   settings: SettingsScreen,
 };
 
 test.each([
-  ['/', 'Allowance', 'Set up your sister’s allowance'],
-  ['/budget', 'Plan', 'New allowance'],
+  ['/', 'Your money', 'Start with a budget'],
+  ['/budget', 'Budgets', 'Create your first budget'],
   ['/transactions', 'Activity', 'Ledger'],
   ['/reports', 'Reports', 'No report yet'],
   ['/settings', 'Settings', 'Your data stays on this device'],
@@ -71,11 +66,11 @@ test('switches tabs through the web shell', async () => {
   const { getPathname } = await renderRouter({ ...routes, _layout: WebTabs }, { initialUrl: '/' });
 
   for (const [label, path, header] of [
-    ['Budget', '/budget', 'Plan'],
-    ['Transactions', '/transactions', 'Activity'],
+    ['Budget', '/budget', 'Budgets'],
+    ['Activity', '/transactions', 'Activity'],
     ['Reports', '/reports', 'Reports'],
     ['Settings', '/settings', 'Settings'],
-    ['Home', '/', 'Allowance'],
+    ['Home', '/', 'Your money'],
   ]) {
     await fireEvent.press(screen.getByRole('tab', { name: `${label} tab` }));
     expect(getPathname()).toBe(path);

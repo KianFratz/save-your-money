@@ -1,10 +1,10 @@
 import { DarkTheme, DefaultTheme, ThemeProvider } from 'expo-router';
 import { SQLiteProvider } from 'expo-sqlite';
-import { StatusBar } from 'expo-status-bar';
+import { StatusBar } from 'react-native';
 
 import AppTabs from '@/components/app-tabs';
 import { migrateDatabase } from '@/data/migrations/migrate-database';
-import { AllowanceDataProvider } from '@/features/allowance/allowance-data-provider';
+import { BudgetDataProvider } from '@/features/budget/budget-data-provider';
 import { useColorScheme } from '@/hooks/use-color-scheme';
 
 export default function TabLayout() {
@@ -12,10 +12,10 @@ export default function TabLayout() {
   return (
     <ThemeProvider value={colorScheme === 'dark' ? DarkTheme : DefaultTheme}>
       <SQLiteProvider databaseName="save-your-money.db" onInit={migrateDatabase}>
-        <AllowanceDataProvider>
-          <StatusBar style={colorScheme === 'dark' ? 'light' : 'dark'} />
+        <BudgetDataProvider>
+          <StatusBar barStyle={colorScheme === 'dark' ? 'light-content' : 'dark-content'} />
           <AppTabs />
-        </AllowanceDataProvider>
+        </BudgetDataProvider>
       </SQLiteProvider>
     </ThemeProvider>
   );
