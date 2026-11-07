@@ -5,11 +5,12 @@ export const DEVELOPMENT_ANDROID_PACKAGE_NAME = 'com.kianfratz.saveyourmoney.dev
 export const DEFAULT_ADB_EXECUTABLE =
   '/mnt/c/Users/Admin/Downloads/platform-tools-latest-windows/platform-tools/adb.exe';
 
-export const MINIMUM_NODE_VERSION = Object.freeze({
-  major: 22,
-  minor: 13,
-  patch: 0,
+export const SUPPORTED_NODE_VERSION_MINIMUMS = Object.freeze({
+  22: Object.freeze({ major: 22, minor: 13, patch: 0 }),
+  24: Object.freeze({ major: 24, minor: 3, patch: 0 }),
 });
+export const MINIMUM_FUTURE_NODE_MAJOR = 26;
+export const SUPPORTED_NODE_VERSION_DESCRIPTION = '22.13+, 24.3+, or a later even-numbered release';
 
 export const RELEASE_CHECKLIST_PATH = 'docs/RELEASE_RECOVERY_CHECKLIST.md';
 

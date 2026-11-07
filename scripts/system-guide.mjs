@@ -16,12 +16,14 @@ import {
   DEVELOPMENT_SETUP_CHECKPOINTS,
   DEVELOPMENT_WORKFLOW_STAGES,
   MAIN_MENU_OPTIONS,
-  MINIMUM_NODE_VERSION,
+  MINIMUM_FUTURE_NODE_MAJOR,
   PROJECT_PACKAGE_NAME,
   PREVIEW_UPDATE_CHECKPOINTS,
   QUALITY_CHECK_COMMANDS,
   RELEASE_CHECKLIST_PATH,
   RELEASE_CHECKPOINTS,
+  SUPPORTED_NODE_VERSION_DESCRIPTION,
+  SUPPORTED_NODE_VERSION_MINIMUMS,
 } from './system-guide/constants.mjs';
 
 const DEPENDENCY_MARKER_PATH = 'node_modules/expo/package.json';
@@ -68,13 +70,18 @@ export function createAdbInstallCommand(adbExecutable, apkPath) {
   };
 }
 
-export function isNodeVersionSupported(version, minimumVersion = MINIMUM_NODE_VERSION) {
+export function isNodeVersionSupported(version) {
   const versionParts = version.split('.').map((part) => Number.parseInt(part, 10));
   const currentVersion = {
     major: versionParts[0] ?? 0,
     minor: versionParts[1] ?? 0,
     patch: versionParts[2] ?? 0,
   };
+
+  const minimumVersion = SUPPORTED_NODE_VERSION_MINIMUMS[currentVersion.major];
+  if (!minimumVersion) {
+    return currentVersion.major >= MINIMUM_FUTURE_NODE_MAJOR && currentVersion.major % 2 === 0;
+  }
 
   for (const key of ['major', 'minor', 'patch']) {
     if (currentVersion[key] > minimumVersion[key]) {
@@ -230,7 +237,7 @@ async function ensureCommandCanRun(commandDefinition, projectRoot) {
 
   if (!isNodeVersionSupported(process.versions.node)) {
     console.log(
-      `\nNode.js ${process.versions.node} is unsupported. Install Node.js ${MINIMUM_NODE_VERSION.major}.${MINIMUM_NODE_VERSION.minor} or newer.`,
+      `\nNode.js ${process.versions.node} is unsupported. Install Node.js ${SUPPORTED_NODE_VERSION_DESCRIPTION}.`,
     );
     return false;
   }
@@ -280,7 +287,7 @@ async function showPrerequisites(projectRoot) {
   console.log('\nPrerequisite report');
   console.log(`  ${projectStatus.valid ? 'PASS' : 'FAIL'}  Save Your Money project root`);
   console.log(
-    `  ${nodeSupported ? 'PASS' : 'FAIL'}  Node.js ${process.versions.node} (minimum ${MINIMUM_NODE_VERSION.major}.${MINIMUM_NODE_VERSION.minor})`,
+    `  ${nodeSupported ? 'PASS' : 'FAIL'}  Node.js ${process.versions.node} (supported: ${SUPPORTED_NODE_VERSION_DESCRIPTION})`,
   );
   console.log(`  ${dependenciesInstalled ? 'PASS' : 'FAIL'}  Project dependencies`);
   console.log('  MANUAL  USB debugging enabled when installing a development APK');
@@ -291,9 +298,7 @@ async function showPrerequisites(projectRoot) {
   }
 
   if (!nodeSupported) {
-    console.log(
-      `Install Node.js ${MINIMUM_NODE_VERSION.major}.${MINIMUM_NODE_VERSION.minor} or newer before continuing.`,
-    );
+    console.log(`Install Node.js ${SUPPORTED_NODE_VERSION_DESCRIPTION} before continuing.`);
   }
 
   if (!dependenciesInstalled) {

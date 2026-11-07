@@ -12,10 +12,14 @@ import {
   toWindowsAdbPath,
 } from '../system-guide.mjs';
 
-test('accepts the Expo SDK 57 minimum Node.js version and newer versions', () => {
+test('accepts the Node.js release lines supported by Expo SDK 58', () => {
   assert.equal(isNodeVersionSupported('22.12.9'), false);
   assert.equal(isNodeVersionSupported('22.13.0'), true);
-  assert.equal(isNodeVersionSupported('24.0.0'), true);
+  assert.equal(isNodeVersionSupported('23.11.1'), false);
+  assert.equal(isNodeVersionSupported('24.2.9'), false);
+  assert.equal(isNodeVersionSupported('24.3.0'), true);
+  assert.equal(isNodeVersionSupported('25.1.0'), false);
+  assert.equal(isNodeVersionSupported('26.0.0'), true);
 });
 
 test('recognizes only the Save Your Money package root', () => {

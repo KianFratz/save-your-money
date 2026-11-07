@@ -10,10 +10,10 @@ This is an [Expo](https://expo.dev) project created with [`create-expo-app`](htt
    npm ci
    ```
 
-2. Start the app
+2. Start the app in Expo Go
 
    ```bash
-   npx expo start
+   npm run go
    ```
 
 In the output, you'll find options to open the app in a
@@ -22,6 +22,15 @@ In the output, you'll find options to open the app in a
 - [Android emulator](https://docs.expo.dev/workflow/android-studio-emulator/)
 - [iOS simulator](https://docs.expo.dev/workflow/ios-simulator/)
 - [Expo Go](https://expo.dev/go), a limited sandbox for trying out app development with Expo
+
+For a physical Android phone connected through USB, enable USB debugging and run:
+
+```bash
+adb reverse tcp:8081 tcp:8081
+npm run go -- --localhost
+```
+
+Keep Metro running, then press `a` or open Expo Go on the phone. Saved JavaScript, TypeScript, and UI changes refresh without rebuilding the app.
 
 ## Interactive system guide
 
@@ -62,7 +71,7 @@ npm run test:guide     # interactive system-guide safety rules
 
 Use `npm run format` to apply Prettier formatting. To run one test file during development, use `npm test -- --runTestsByPath __tests__/shell-routes.test.tsx`.
 
-The routed test uses `expo-router/testing-library` with React Native Testing Library 13.3.3. Version 14.0.1 passed its package peer checks, but Expo Router 57's exported `screen` stayed uninitialized after `renderRouter`, so route queries and the `toHavePathname` matcher failed. Version 13.3.3 works with this SDK 57 scaffold and is pinned in the lockfile.
+The routed tests use `expo-router/testing-library` with React Native Testing Library 14. SDK 58's React 19.3 test renderer is asynchronous, so render and event helpers must be awaited before assertions.
 
 You can start developing by editing the files inside the **src/app** directory. This project uses [file-based routing](https://docs.expo.dev/router/introduction).
 

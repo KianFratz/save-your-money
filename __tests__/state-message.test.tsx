@@ -10,17 +10,17 @@ test.each<[StateKind, string]>([
   ['warning', 'Warning'],
   ['recoverable-error', 'Something went wrong'],
   ['unrecoverable-error', 'Cannot continue'],
-])('%s state explains itself in text', (kind, label) => {
-  render(<StateMessage kind={kind} title="Example title" message="Example explanation" />);
+])('%s state explains itself in text', async (kind, label) => {
+  await render(<StateMessage kind={kind} title="Example title" message="Example explanation" />);
 
   expect(screen.getByText(label)).toBeTruthy();
   expect(screen.getByRole('header', { name: 'Example title' })).toBeTruthy();
   expect(screen.getByText('Example explanation')).toBeTruthy();
 });
 
-test('recoverable state offers a named retry action', () => {
+test('recoverable state offers a named retry action', async () => {
   const onRetry = jest.fn();
-  render(
+  await render(
     <StateMessage
       kind="recoverable-error"
       title="Could not load"
@@ -30,6 +30,6 @@ test('recoverable state offers a named retry action', () => {
     />,
   );
 
-  fireEvent.press(screen.getByRole('button', { name: 'Try again' }));
+  await fireEvent.press(screen.getByRole('button', { name: 'Try again' }));
   expect(onRetry).toHaveBeenCalledTimes(1);
 });

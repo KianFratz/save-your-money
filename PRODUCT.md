@@ -42,7 +42,7 @@ The product name is Save Your Money. Interface language uses the domain terms re
 
 ## Evidence on Hand
 
-The confirmed product interview and domain decisions are recorded in `CONTEXT.md` and `docs/adr/`. The repository contains an Expo SDK 57 shell and navigation, but no existing product data, customer claims, or mature visual identity to preserve.
+The confirmed product interview and domain decisions are recorded in `CONTEXT.md` and `docs/adr/`. The repository contains an Expo SDK 58 shell and navigation, but no existing product data, customer claims, or mature visual identity to preserve.
 
 ## Product Principles
 

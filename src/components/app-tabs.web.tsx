@@ -1,4 +1,5 @@
 import { TabList, TabSlot, Tabs, TabTrigger, type TabTriggerSlotProps } from 'expo-router/ui';
+import type { ComponentRef, Ref } from 'react';
 import { Pressable, StyleSheet, View } from 'react-native';
 
 import { ThemedText } from '@/components/themed-text';
@@ -33,11 +34,15 @@ export default function AppTabs() {
   );
 }
 
-function TabButton({ children, isFocused, ...props }: TabTriggerSlotProps) {
+function TabButton({ children, isFocused, ref, ...props }: TabTriggerSlotProps) {
   const theme = useTheme();
+  // Expo Router's slot still exposes the pre-strict-API View ref type in SDK 58.
+  const pressableRef = ref as unknown as Ref<ComponentRef<typeof Pressable>>;
+
   return (
     <Pressable
       {...props}
+      ref={pressableRef}
       accessibilityRole="tab"
       accessibilityLabel={`${children} tab`}
       accessibilityState={{ selected: isFocused }}

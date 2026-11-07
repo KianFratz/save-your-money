@@ -59,16 +59,16 @@ test.each([
   ['/transactions', 'Activity', 'Ledger'],
   ['/reports', 'Reports', 'No report yet'],
   ['/settings', 'Settings', 'Your data stays on this device'],
-])('opens %s without an account', (path, title, message) => {
-  const { getPathname } = renderRouter(routes, { initialUrl: path });
+])('opens %s without an account', async (path, title, message) => {
+  const { getPathname } = await renderRouter(routes, { initialUrl: path });
 
   expect(getPathname()).toBe(path);
   expect(screen.getByRole('header', { name: title })).toBeTruthy();
   expect(screen.getByText(message)).toBeTruthy();
 });
 
-test('switches tabs through the web shell', () => {
-  const { getPathname } = renderRouter({ ...routes, _layout: WebTabs }, { initialUrl: '/' });
+test('switches tabs through the web shell', async () => {
+  const { getPathname } = await renderRouter({ ...routes, _layout: WebTabs }, { initialUrl: '/' });
 
   for (const [label, path, header] of [
     ['Budget', '/budget', 'Plan'],
@@ -77,15 +77,15 @@ test('switches tabs through the web shell', () => {
     ['Settings', '/settings', 'Settings'],
     ['Home', '/', 'Allowance'],
   ]) {
-    fireEvent.press(screen.getByRole('tab', { name: `${label} tab` }));
+    await fireEvent.press(screen.getByRole('tab', { name: `${label} tab` }));
     expect(getPathname()).toBe(path);
     expect(screen.getByRole('header', { name: header })).toBeTruthy();
   }
 });
 
-test('a routed recoverable state explains the problem and offers retry', () => {
+test('a routed recoverable state explains the problem and offers retry', async () => {
   const onRetry = jest.fn();
-  const { getPathname } = renderRouter({
+  const { getPathname } = await renderRouter({
     index: () => (
       <StateMessage
         kind="recoverable-error"
@@ -100,6 +100,6 @@ test('a routed recoverable state explains the problem and offers retry', () => {
   expect(getPathname()).toBe('/');
   expect(screen.getByText('Something went wrong')).toBeTruthy();
   expect(screen.getByText('Try again to load your overview.')).toBeTruthy();
-  fireEvent.press(screen.getByRole('button', { name: 'Try again' }));
+  await fireEvent.press(screen.getByRole('button', { name: 'Try again' }));
   expect(onRetry).toHaveBeenCalledTimes(1);
 });
