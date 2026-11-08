@@ -61,7 +61,7 @@ The category name and budget group retained by a budget period so later category
 _Avoid_: Monthly category snapshot, category version, category history
 
 **Category allocation**:
-The portion of a budget group's money assigned to one category for a specific budget period.
+An optional portion of a budget group's money assigned to one category for a specific budget period; a category can classify expenditures without having an allocation.
 _Avoid_: Category percentage, category balance
 
 **Unallocated amount**:

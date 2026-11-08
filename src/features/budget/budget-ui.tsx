@@ -20,7 +20,7 @@ import {
 } from '@/constants/budget';
 import { MaxContentWidth, Spacing, type ThemeColor } from '@/constants/theme';
 import { formatBudgetIdentity, formatBudgetPeriod } from '@/domain/budget';
-import type { Budget, BudgetRecord, GroupSummary } from '@/domain/budget-types';
+import type { Budget, BudgetRecord, CategoryAllocation, GroupSummary } from '@/domain/budget-types';
 import { formatPeso } from '@/domain/money';
 import { useTheme } from '@/hooks/use-theme';
 
@@ -380,9 +380,7 @@ export function GroupLane({
         ? group.categories.map((category) => (
             <View key={category.categoryId} style={styles.categoryRow}>
               <ThemedText type="small">{category.categoryName}</ThemedText>
-              <ThemedText type="smallBold">
-                {formatPeso(category.spentCents)} / {formatPeso(category.allocatedCents)}
-              </ThemedText>
+              <ThemedText type="smallBold">{formatCategoryProgress(category)}</ThemedText>
             </View>
           ))
         : null}
@@ -393,6 +391,16 @@ export function GroupLane({
       ) : null}
     </View>
   );
+}
+
+function formatCategoryProgress(category: CategoryAllocation): string {
+  if (category.allocatedCents > 0) {
+    return `${formatPeso(category.spentCents)} / ${formatPeso(category.allocatedCents)}`;
+  }
+  if (category.spentCents > 0) {
+    return `${formatPeso(category.spentCents)} spent · No budget set`;
+  }
+  return 'No budget set';
 }
 
 export function RecordList({

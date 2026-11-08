@@ -1,11 +1,5 @@
 import { BUDGET_GROUPS } from '@/constants/budget';
-import type {
-  BudgetCadence,
-  BudgetGroupKey,
-  BudgetTiming,
-  Category,
-  CategoryAllocationInput,
-} from '@/domain/budget-types';
+import type { BudgetCadence, BudgetGroupKey, BudgetTiming } from '@/domain/budget-types';
 
 export type GroupPercentages = Readonly<Record<BudgetGroupKey, number>>;
 
@@ -73,28 +67,6 @@ export function getBudgetTiming(
   return 'current';
 }
 
-export function buildDefaultCategoryAllocations(
-  totalCents: number,
-  percentages: GroupPercentages,
-  categories: readonly Pick<Category, 'id' | 'groupKey' | 'displayOrder'>[],
-): CategoryAllocationInput[] {
-  const groupAllocations = allocateByLargestRemainder(totalCents, percentages);
-  return categories.map((category) => {
-    const groupCategories = categories
-      .filter((candidate) => candidate.groupKey === category.groupKey)
-      .sort((left, right) => left.displayOrder - right.displayOrder);
-    const index = groupCategories.findIndex((candidate) => candidate.id === category.id);
-    return {
-      categoryId: category.id,
-      allocatedCents: distributeEvenly(
-        groupAllocations[category.groupKey],
-        groupCategories.length,
-        index,
-      ),
-    };
-  });
-}
-
 export function formatBudgetPeriod(startDate: string, endDate: string): string {
   const start = parseIsoDate(startDate);
   const end = parseIsoDate(endDate);
@@ -150,10 +122,4 @@ export function parseIsoDate(value: string): Date {
 
 function formatIsoDate(date: Date): string {
   return date.toISOString().slice(0, 10);
-}
-
-function distributeEvenly(totalCents: number, count: number, index: number): number {
-  if (count <= 0 || index < 0) return 0;
-  const base = Math.floor(totalCents / count);
-  return base + (index < totalCents % count ? 1 : 0);
 }

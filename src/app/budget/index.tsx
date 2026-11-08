@@ -107,11 +107,7 @@ export default function BudgetScreen() {
         description="Set the received amount and how you want to divide it."
         onClose={() => setShowCreate(false)}>
         {errorMessage ? <StatusBanner tone="error" message={errorMessage} /> : null}
-        <NewBudgetForm
-          categories={snapshot?.categories ?? []}
-          isSaving={isSaving}
-          onSubmit={createNewBudget}
-        />
+        <NewBudgetForm isSaving={isSaving} onSubmit={createNewBudget} />
       </ModalFrame>
       {errorMessage && !snapshot ? (
         <StateMessage

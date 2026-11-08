@@ -2,7 +2,6 @@ import { describe, expect, test } from '@jest/globals';
 
 import {
   allocateByLargestRemainder,
-  buildDefaultCategoryAllocations,
   getBudgetBounds,
   getBudgetTiming,
   isValidIsoDate,
@@ -30,25 +29,6 @@ describe('budget money rules', () => {
     const result = allocateByLargestRemainder(101, { needs: 50, wants: 30, savings: 20 });
     expect(result).toEqual({ needs: 51, wants: 30, savings: 20 });
     expect(result.needs + result.wants + result.savings).toBe(101);
-  });
-
-  test('distributes each group across its categories without losing cents', () => {
-    const allocations = buildDefaultCategoryAllocations(
-      101,
-      { needs: 50, wants: 30, savings: 20 },
-      [
-        { id: 1, groupKey: 'needs', displayOrder: 0 },
-        { id: 2, groupKey: 'needs', displayOrder: 1 },
-        { id: 3, groupKey: 'wants', displayOrder: 2 },
-        { id: 4, groupKey: 'savings', displayOrder: 3 },
-      ],
-    );
-    expect(allocations).toEqual([
-      { categoryId: 1, allocatedCents: 26 },
-      { categoryId: 2, allocatedCents: 25 },
-      { categoryId: 3, allocatedCents: 30 },
-      { categoryId: 4, allocatedCents: 20 },
-    ]);
   });
 });
 
