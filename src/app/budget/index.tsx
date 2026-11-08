@@ -3,7 +3,7 @@ import { useState } from 'react';
 
 import { ScreenFrame } from '@/components/screen-frame';
 import { StateMessage } from '@/components/state-message';
-import { BUDGET_TIMING_LABELS } from '@/constants/budget';
+import { BUDGET_ARCHIVE_VIEW_OPTIONS, BUDGET_TIMING_LABELS } from '@/constants/budget';
 import type { BudgetTiming, CreateBudgetInput } from '@/domain/budget-types';
 import { NewBudgetForm } from '@/features/budget/budget-form';
 import { useBudgetData, useClearBudgetErrorOnBlur } from '@/features/budget/budget-data-provider';
@@ -16,15 +16,12 @@ import {
   StatusBanner,
 } from '@/features/budget/budget-ui';
 
-const ARCHIVE_OPTIONS = [
-  { value: 'active', label: 'Active' },
-  { value: 'archived', label: 'Archived' },
-] as const;
+type BudgetArchiveView = (typeof BUDGET_ARCHIVE_VIEW_OPTIONS)[number]['value'];
 
 export default function BudgetScreen() {
   const { snapshot, isLoading, isSaving, errorMessage, refresh, create } = useBudgetData();
   const [showCreate, setShowCreate] = useState(false);
-  const [archiveView, setArchiveView] = useState<'active' | 'archived'>('active');
+  const [archiveView, setArchiveView] = useState<BudgetArchiveView>('budgets');
   useClearBudgetErrorOnBlur();
 
   const budgets = (snapshot?.budgets ?? []).filter((budget) =>
@@ -51,7 +48,7 @@ export default function BudgetScreen() {
       {errorMessage ? <StatusBanner tone="error" message={errorMessage} /> : null}
       <ChoiceChips
         label="Budget view"
-        options={ARCHIVE_OPTIONS}
+        options={BUDGET_ARCHIVE_VIEW_OPTIONS}
         value={archiveView}
         onChange={setArchiveView}
       />

@@ -79,3 +79,8 @@ export const ARCHIVE_REPORT_OPTIONS = [
   { value: 'hide', label: 'Hide archived' },
   { value: 'show', label: 'Include archived' },
 ] as const;
+
+export const BUDGET_ARCHIVE_VIEW_OPTIONS = [
+  { value: 'budgets', label: 'Budgets' },
+  { value: 'archived', label: 'Archived' },
+] as const;

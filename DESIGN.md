@@ -208,7 +208,7 @@ Screens use a single scrolling column with a maximum content width of 800dp, 24d
 
 Flow rows, lane headers, chips, and summaries wrap instead of clipping. The same structure therefore serves narrow phones, larger Android windows, and increased font sizes. React Native text keeps platform font scaling enabled; do not fix text containers to single-line heights. Controls retain at least 48dp touch height, while fields use 52dp.
 
-The five labeled native destinations remain Home, Budget, Activity, Reports, and Settings. Home aggregates current Budgets; Budget owns creation and detail; Activity owns the complete ledger; Reports inspects one selected Budget; Settings manages categories.
+The five labeled native destinations remain Home, Budget, Activity, Reports, and Settings. Home shows one Budget covering today directly. When periods overlap, it adds compact across-Budget context above the independently navigable Budget cards; it keeps cumulative Savings separate from current-period money. Budget owns creation and detail; Activity owns the complete ledger; Reports inspects one selected Budget; Settings manages categories.
 
 ## Elevation & Depth
 
