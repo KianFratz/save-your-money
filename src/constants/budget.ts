@@ -25,6 +25,13 @@ export const BUDGET_GROUP_OPTIONS = BUDGET_GROUPS.map((value) => ({
   label: BUDGET_GROUP_LABELS[value],
 }));
 
+export const BUDGET_GROUP_FILTER_OPTIONS: readonly {
+  value: BudgetGroupKey | 'all';
+  label: string;
+}[] = [{ value: 'all', label: 'All groups' }, ...BUDGET_GROUP_OPTIONS];
+
+export const GROUP_ACTIVITY_PREVIEW_LIMIT = 3;
+
 export const STARTER_CATEGORIES: readonly CategorySeed[] = [
   { name: 'Fare', groupKey: 'needs' },
   { name: 'Food', groupKey: 'needs' },
@@ -62,3 +69,13 @@ export const RECORD_TYPE_OPTIONS: readonly { value: BudgetRecordType; label: str
   { value: 'refund', label: RECORD_TYPE_LABELS.refund },
   { value: 'savings_withdrawal', label: RECORD_TYPE_LABELS.savings_withdrawal },
 ];
+
+export const RECORD_TYPE_FILTER_OPTIONS: readonly {
+  value: BudgetRecordType | 'all';
+  label: string;
+}[] = [{ value: 'all', label: 'All types' }, ...RECORD_TYPE_OPTIONS];
+
+export const ARCHIVE_REPORT_OPTIONS = [
+  { value: 'hide', label: 'Hide archived' },
+  { value: 'show', label: 'Include archived' },
+] as const;

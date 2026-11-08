@@ -1,10 +1,20 @@
+import { router, useLocalSearchParams } from 'expo-router';
 import { useState } from 'react';
 import { Alert } from 'react-native';
 
 import { ScreenFrame } from '@/components/screen-frame';
 import { StateMessage } from '@/components/state-message';
-import { RECORD_TYPE_LABELS } from '@/constants/budget';
-import type { BudgetRecord, BudgetRecordType, SaveBudgetRecordInput } from '@/domain/budget-types';
+import {
+  BUDGET_GROUP_FILTER_OPTIONS,
+  BUDGET_GROUPS,
+  RECORD_TYPE_FILTER_OPTIONS,
+} from '@/constants/budget';
+import type {
+  BudgetGroupKey,
+  BudgetRecord,
+  BudgetRecordType,
+  SaveBudgetRecordInput,
+} from '@/domain/budget-types';
 import { formatBudgetIdentity } from '@/domain/budget';
 import { useBudgetData, useClearBudgetErrorOnBlur } from '@/features/budget/budget-data-provider';
 import { BudgetRecordForm } from '@/features/budget/budget-record-form';
@@ -19,19 +29,28 @@ import {
 } from '@/features/budget/budget-ui';
 
 type TypeFilter = BudgetRecordType | 'all';
+type GroupFilter = BudgetGroupKey | 'all';
+
+type ActivitySearchParams = {
+  budgetId?: string | string[];
+  group?: string | string[];
+};
 
 export default function ActivityScreen() {
+  const searchParams = useLocalSearchParams<ActivitySearchParams>();
   const { snapshot, isLoading, isSaving, errorMessage, saveRecord, removeRecord } = useBudgetData();
   const [showForm, setShowForm] = useState(false);
   const [editingRecord, setEditingRecord] = useState<BudgetRecord | undefined>();
-  const [budgetFilter, setBudgetFilter] = useState<number>(0);
   const [typeFilter, setTypeFilter] = useState<TypeFilter>('all');
   const [fromDate, setFromDate] = useState('');
   const [toDate, setToDate] = useState('');
+  const budgetFilter = parseBudgetFilter(searchParams.budgetId);
+  const groupFilter = parseGroupFilter(searchParams.group);
   useClearBudgetErrorOnBlur();
 
   const records = (snapshot?.records ?? []).filter((record) => {
     if (budgetFilter !== 0 && record.budgetId !== budgetFilter) return false;
+    if (groupFilter !== 'all' && record.groupKey !== groupFilter) return false;
     if (typeFilter !== 'all' && record.type !== typeFilter) return false;
     if (fromDate && record.effectiveDate < fromDate) return false;
     if (toDate && record.effectiveDate > toDate) return false;
@@ -84,17 +103,19 @@ export default function ActivityScreen() {
             })),
           ]}
           value={budgetFilter}
-          onChange={setBudgetFilter}
+          onChange={(value) =>
+            router.setParams({ budgetId: value === 0 ? undefined : String(value) })
+          }
+        />
+        <ChoiceChips
+          label="Budget group"
+          options={BUDGET_GROUP_FILTER_OPTIONS}
+          value={groupFilter}
+          onChange={(value) => router.setParams({ group: value === 'all' ? undefined : value })}
         />
         <ChoiceChips
           label="Record type"
-          options={[
-            { value: 'all' as const, label: 'All types' },
-            ...Object.entries(RECORD_TYPE_LABELS).map(([value, label]) => ({
-              value: value as BudgetRecordType,
-              label,
-            })),
-          ]}
+          options={RECORD_TYPE_FILTER_OPTIONS}
           value={typeFilter}
           onChange={setTypeFilter}
         />
@@ -149,4 +170,16 @@ export default function ActivityScreen() {
       </ModalFrame>
     </ScreenFrame>
   );
+}
+
+function parseBudgetFilter(value: string | string[] | undefined): number {
+  const rawValue = Array.isArray(value) ? value[0] : value;
+  if (!rawValue) return 0;
+  const budgetId = Number(rawValue);
+  return Number.isInteger(budgetId) && budgetId > 0 ? budgetId : 0;
+}
+
+function parseGroupFilter(value: string | string[] | undefined): GroupFilter {
+  const rawValue = Array.isArray(value) ? value[0] : value;
+  return BUDGET_GROUPS.find((groupKey) => groupKey === rawValue) ?? 'all';
 }

@@ -1,8 +1,10 @@
+import { router } from 'expo-router';
 import { useMemo, useState } from 'react';
 
 import { ScreenFrame } from '@/components/screen-frame';
 import { StateMessage } from '@/components/state-message';
-import { formatBudgetIdentity } from '@/domain/budget';
+import { ARCHIVE_REPORT_OPTIONS } from '@/constants/budget';
+import { formatBudgetIdentity, groupBudgetRecords } from '@/domain/budget';
 import { useBudgetData, useClearBudgetErrorOnBlur } from '@/features/budget/budget-data-provider';
 import {
   BudgetSummary,
@@ -11,11 +13,6 @@ import {
   Section,
   StatusBanner,
 } from '@/features/budget/budget-ui';
-
-const ARCHIVE_REPORT_OPTIONS = [
-  { value: 'hide', label: 'Hide archived' },
-  { value: 'show', label: 'Include archived' },
-] as const;
 
 export default function ReportsScreen() {
   const { snapshot, isLoading, errorMessage } = useBudgetData();
@@ -31,6 +28,10 @@ export default function ReportsScreen() {
     budgets.find((budget) => !budget.archived) ??
     budgets[0];
   const selectedBudget = budgets.find((budget) => budget.id === selectedBudgetId) ?? defaultBudget;
+  const recordsByGroup = useMemo(
+    () => groupBudgetRecords(snapshot?.records ?? [], selectedBudget?.id ?? -1),
+    [selectedBudget?.id, snapshot?.records],
+  );
 
   return (
     <ScreenFrame title="Reports" description="Inspect one budget at a time without mixing periods.">
@@ -66,7 +67,20 @@ export default function ReportsScreen() {
               <BudgetSummary budget={selectedBudget} />
               <Section title="Group performance">
                 {selectedBudget.groups.map((group) => (
-                  <GroupLane key={group.groupKey} group={group} expanded />
+                  <GroupLane
+                    key={group.groupKey}
+                    group={group}
+                    records={recordsByGroup[group.groupKey]}
+                    onViewAll={() =>
+                      router.push({
+                        pathname: '/transactions',
+                        params: {
+                          budgetId: String(selectedBudget.id),
+                          group: group.groupKey,
+                        },
+                      })
+                    }
+                  />
                 ))}
               </Section>
             </>

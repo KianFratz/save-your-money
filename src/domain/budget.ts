@@ -1,5 +1,10 @@
 import { BUDGET_GROUPS } from '@/constants/budget';
-import type { BudgetCadence, BudgetGroupKey, BudgetTiming } from '@/domain/budget-types';
+import type {
+  BudgetCadence,
+  BudgetGroupKey,
+  BudgetRecord,
+  BudgetTiming,
+} from '@/domain/budget-types';
 
 export type GroupPercentages = Readonly<Record<BudgetGroupKey, number>>;
 
@@ -65,6 +70,24 @@ export function getBudgetTiming(
   if (referenceDate < startDate) return 'upcoming';
   if (referenceDate > endDate) return 'past';
   return 'current';
+}
+
+export function groupBudgetRecords(
+  records: readonly BudgetRecord[],
+  budgetId: number,
+): Record<BudgetGroupKey, BudgetRecord[]> {
+  const recordsByGroup: Record<BudgetGroupKey, BudgetRecord[]> = {
+    needs: [],
+    wants: [],
+    savings: [],
+  };
+
+  for (const record of records) {
+    if (record.budgetId !== budgetId) continue;
+    recordsByGroup[record.groupKey].push(record);
+  }
+
+  return recordsByGroup;
 }
 
 export function formatBudgetPeriod(startDate: string, endDate: string): string {

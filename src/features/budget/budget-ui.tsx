@@ -15,12 +15,13 @@ import { ThemedView } from '@/components/themed-view';
 import {
   BUDGET_GROUP_LABELS,
   BUDGET_TIMING_LABELS,
+  GROUP_ACTIVITY_PREVIEW_LIMIT,
   RECORD_TYPE_LABELS,
   WARNING_THRESHOLD,
 } from '@/constants/budget';
 import { MaxContentWidth, Spacing, type ThemeColor } from '@/constants/theme';
 import { formatBudgetIdentity, formatBudgetPeriod } from '@/domain/budget';
-import type { Budget, BudgetRecord, CategoryAllocation, GroupSummary } from '@/domain/budget-types';
+import type { Budget, BudgetRecord, GroupSummary } from '@/domain/budget-types';
 import { formatPeso } from '@/domain/money';
 import { useTheme } from '@/hooks/use-theme';
 
@@ -339,14 +340,18 @@ function MetricLine({
 
 export function GroupLane({
   group,
-  expanded = false,
+  records,
+  onViewAll,
 }: {
   group: GroupSummary;
-  expanded?: boolean;
+  records: readonly BudgetRecord[];
+  onViewAll?: () => void;
 }) {
   const theme = useTheme();
   const ratio = group.allocatedCents === 0 ? 0 : group.spentCents / group.allocatedCents;
   const groupColor = theme[group.groupKey as ThemeColor];
+  const groupLabel = BUDGET_GROUP_LABELS[group.groupKey];
+  const previewRecords = records.slice(0, GROUP_ACTIVITY_PREVIEW_LIMIT);
   return (
     <View style={[styles.lane, { borderBottomColor: theme.outlineVariant }]}>
       <View style={styles.laneTop}>
@@ -354,7 +359,7 @@ export function GroupLane({
           <View style={[styles.groupMarker, { backgroundColor: groupColor }]} />
           <View>
             <ThemedText type="smallBold">
-              {BUDGET_GROUP_LABELS[group.groupKey]} · {group.percentage}%
+              {groupLabel} · {group.percentage}%
             </ThemedText>
             <ThemedText type="small" themeColor="textSecondary">
               {formatPeso(group.spentCents)} of {formatPeso(group.allocatedCents)}
@@ -376,31 +381,26 @@ export function GroupLane({
           {ratio > 1 ? 'Over this group plan' : '80% of this group is already spent'}
         </ThemedText>
       ) : null}
-      {expanded
-        ? group.categories.map((category) => (
-            <View key={category.categoryId} style={styles.categoryRow}>
-              <ThemedText type="small">{category.categoryName}</ThemedText>
-              <ThemedText type="smallBold">{formatCategoryProgress(category)}</ThemedText>
-            </View>
-          ))
-        : null}
       {group.unallocatedCents > 0 ? (
         <ThemedText type="small" themeColor="textSecondary">
           {formatPeso(group.unallocatedCents)} not assigned to a category
         </ThemedText>
       ) : null}
+      <View style={styles.groupActivity}>
+        <ThemedText type="label" themeColor="textSecondary">
+          Recent activity
+        </ThemedText>
+        <RecordList
+          records={previewRecords}
+          emptyMessage="No expenses logged in this group yet."
+          showBudgetIdentity={false}
+        />
+        {records.length > GROUP_ACTIVITY_PREVIEW_LIMIT && onViewAll ? (
+          <TextAction label={`View all ${groupLabel} activity`} onPress={onViewAll} />
+        ) : null}
+      </View>
     </View>
   );
-}
-
-function formatCategoryProgress(category: CategoryAllocation): string {
-  if (category.allocatedCents > 0) {
-    return `${formatPeso(category.spentCents)} / ${formatPeso(category.allocatedCents)}`;
-  }
-  if (category.spentCents > 0) {
-    return `${formatPeso(category.spentCents)} spent · No budget set`;
-  }
-  return 'No budget set';
 }
 
 export function RecordList({
@@ -408,11 +408,13 @@ export function RecordList({
   onEdit,
   onDelete,
   emptyMessage = 'No activity yet.',
+  showBudgetIdentity = true,
 }: {
-  records: BudgetRecord[];
+  records: readonly BudgetRecord[];
   onEdit?: (record: BudgetRecord) => void;
   onDelete?: (record: BudgetRecord) => void;
   emptyMessage?: string;
+  showBudgetIdentity?: boolean;
 }) {
   const theme = useTheme();
   if (records.length === 0) {
@@ -425,15 +427,14 @@ export function RecordList({
           key={record.id}
           style={[styles.recordRow, { borderBottomColor: theme.outlineVariant }]}>
           <View style={styles.recordCopy}>
-            <ThemedText type="smallBold">
-              {record.type === 'expenditure' && record.groupKey === 'savings'
-                ? 'Saved money'
-                : RECORD_TYPE_LABELS[record.type]}
-            </ThemedText>
+            <ThemedText type="smallBold">{record.description || record.categoryName}</ThemedText>
             <ThemedText type="small" themeColor="textSecondary">
-              {[record.categoryName, record.effectiveDate].join(' · ')}
+              {formatRecordDetails(record)}
             </ThemedText>
-            {record.budgetCadence && record.budgetStartDate && record.budgetEndDate ? (
+            {showBudgetIdentity &&
+            record.budgetCadence &&
+            record.budgetStartDate &&
+            record.budgetEndDate ? (
               <ThemedText type="small" themeColor="textSecondary">
                 {formatBudgetIdentity(
                   record.budgetCadence,
@@ -442,7 +443,6 @@ export function RecordList({
                 )}
               </ThemedText>
             ) : null}
-            {record.description ? <ThemedText type="small">{record.description}</ThemedText> : null}
             {onEdit || onDelete ? (
               <View style={styles.recordActions}>
                 {onEdit ? <TextAction label="Edit" onPress={() => onEdit(record)} /> : null}
@@ -460,6 +460,23 @@ export function RecordList({
       ))}
     </View>
   );
+}
+
+function formatRecordDetails(record: BudgetRecord): string {
+  const recordType =
+    record.type === 'refund'
+      ? RECORD_TYPE_LABELS.refund
+      : record.type === 'savings_withdrawal'
+        ? RECORD_TYPE_LABELS.savings_withdrawal
+        : record.groupKey === 'savings'
+          ? 'Saved money'
+          : null;
+  const details = [
+    recordType,
+    record.description ? record.categoryName : null,
+    record.effectiveDate,
+  ];
+  return details.filter((detail): detail is string => detail !== null).join(' · ');
 }
 
 function TextAction({
@@ -567,7 +584,7 @@ const styles = StyleSheet.create({
   },
   groupTitle: { flexDirection: 'row', alignItems: 'center', gap: Spacing.two },
   groupMarker: { width: 10, height: 10, borderRadius: 5 },
-  categoryRow: { flexDirection: 'row', justifyContent: 'space-between', gap: Spacing.three },
+  groupActivity: { gap: Spacing.one, paddingTop: Spacing.one },
   recordRow: {
     minHeight: 76,
     borderBottomWidth: StyleSheet.hairlineWidth,
@@ -579,5 +596,5 @@ const styles = StyleSheet.create({
   },
   recordCopy: { flex: 1, gap: Spacing.one },
   recordActions: { flexDirection: 'row', flexWrap: 'wrap', gap: Spacing.two },
-  textAction: { minHeight: 48, minWidth: 48, justifyContent: 'center' },
+  textAction: { minHeight: 48, minWidth: 48, alignSelf: 'flex-start', justifyContent: 'center' },
 });

@@ -86,6 +86,10 @@ jest.mock('@/features/budget/budget-data-provider', () => ({
 test('does not offer category allocation editing from budget details', async () => {
   await renderRouter({ 'budget/[id]': BudgetDetailScreen }, { initialUrl: '/budget/1' });
 
+  expect(screen.getByRole('header', { name: 'Activity by group' })).toBeTruthy();
+  expect(screen.getAllByText('No expenses logged in this group yet.')).toHaveLength(3);
+  expect(screen.queryByText('Fare')).toBeNull();
+  expect(screen.queryByRole('header', { name: 'Activity' })).toBeNull();
   expect(screen.queryByText(/Edit .* allocations/i)).toBeNull();
   expect(screen.queryByLabelText('Fare allocation')).toBeNull();
   expect(screen.queryByRole('button', { name: 'Save allocation' })).toBeNull();

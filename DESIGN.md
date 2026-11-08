@@ -237,7 +237,7 @@ Choice chips form labeled radio groups. They wrap with 8dp gaps, retain a 48dp m
 
 ### Cards / Containers
 
-The signature Budget card shows cadence, date range, derived timing, received amount, spent amount, remaining amount, and a progress track. Detail screens add Needs, Wants, and Savings lanes with group allocation, spending, remaining, read-only category spending, and explicit 80%/over-plan messages.
+The signature Budget card shows cadence, date range, derived timing, received amount, spent amount, remaining amount, and a progress track. Detail screens add Needs, Wants, and Savings lanes with group allocation, spending, remaining, unallocated money, the three newest group records, filtered full-activity links when more records exist, and explicit 80%/over-plan messages.
 
 ### Inputs / Fields
 

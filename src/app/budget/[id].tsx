@@ -1,13 +1,13 @@
 import { router, useLocalSearchParams } from 'expo-router';
-import { useState } from 'react';
+import { useMemo, useState } from 'react';
 import { Alert, Pressable, StyleSheet, View } from 'react-native';
 
 import { ScreenFrame } from '@/components/screen-frame';
 import { StateMessage } from '@/components/state-message';
 import { ThemedText } from '@/components/themed-text';
 import { Spacing } from '@/constants/theme';
-import { todayIsoDate } from '@/domain/budget';
-import type { BudgetRecord, SaveBudgetRecordInput, UpdateBudgetInput } from '@/domain/budget-types';
+import { groupBudgetRecords, todayIsoDate } from '@/domain/budget';
+import type { SaveBudgetRecordInput, UpdateBudgetInput } from '@/domain/budget-types';
 import { EditBudgetForm } from '@/features/budget/budget-form';
 import { useBudgetData } from '@/features/budget/budget-data-provider';
 import { BudgetRecordForm } from '@/features/budget/budget-record-form';
@@ -16,7 +16,6 @@ import {
   BudgetSummary,
   GroupLane,
   ModalFrame,
-  RecordList,
   Section,
   StatusBanner,
 } from '@/features/budget/budget-ui';
@@ -33,14 +32,19 @@ export default function BudgetDetailScreen() {
     restore,
     removeEmpty,
     saveRecord,
-    removeRecord,
   } = useBudgetData();
   const budgetId = Number(id);
   const budget = snapshot?.budgets.find((candidate) => candidate.id === budgetId);
-  const records = (snapshot?.records ?? []).filter((record) => record.budgetId === budgetId);
+  const recordsByGroup = useMemo(
+    () => groupBudgetRecords(snapshot?.records ?? [], budgetId),
+    [budgetId, snapshot?.records],
+  );
+  const recordCount = Object.values(recordsByGroup).reduce(
+    (count, groupRecords) => count + groupRecords.length,
+    0,
+  );
   const [showEditBudget, setShowEditBudget] = useState(false);
   const [showRecordForm, setShowRecordForm] = useState(false);
-  const [editingRecord, setEditingRecord] = useState<BudgetRecord | undefined>();
 
   if (isLoading && !snapshot) {
     return (
@@ -66,14 +70,6 @@ export default function BudgetDetailScreen() {
   async function saveActivity(input: SaveBudgetRecordInput) {
     await saveRecord(input);
     setShowRecordForm(false);
-    setEditingRecord(undefined);
-  }
-
-  function confirmDeleteRecord(record: BudgetRecord) {
-    Alert.alert('Delete this record?', 'The budget totals will update immediately.', [
-      { text: 'Cancel', style: 'cancel' },
-      { text: 'Delete', style: 'destructive', onPress: () => void removeRecord(record.id) },
-    ]);
   }
 
   function confirmBudgetAction() {
@@ -81,7 +77,7 @@ export default function BudgetDetailScreen() {
       void restore(currentBudget.id);
       return;
     }
-    if (records.length > 0) {
+    if (recordCount > 0) {
       Alert.alert('Archive this budget?', 'Its records stay in your history and reports.', [
         { text: 'Cancel', style: 'cancel' },
         { text: 'Archive', onPress: () => void archive(currentBudget.id) },
@@ -135,7 +131,7 @@ export default function BudgetDetailScreen() {
           label={
             budget.archived
               ? 'Restore budget'
-              : records.length > 0
+              : recordCount > 0
                 ? 'Archive budget'
                 : 'Delete budget'
           }
@@ -143,27 +139,21 @@ export default function BudgetDetailScreen() {
           onPress={confirmBudgetAction}
         />
       </View>
-      <Section title="Plan by group">
+      <Section title="Activity by group">
         {budget.groups.map((group) => (
           <View key={group.groupKey} style={styles.groupBlock}>
-            <GroupLane group={group} expanded />
+            <GroupLane
+              group={group}
+              records={recordsByGroup[group.groupKey]}
+              onViewAll={() =>
+                router.push({
+                  pathname: '/transactions',
+                  params: { budgetId: String(budget.id), group: group.groupKey },
+                })
+              }
+            />
           </View>
         ))}
-      </Section>
-      <Section title="Activity">
-        <RecordList
-          records={records}
-          onEdit={
-            budget.archived
-              ? undefined
-              : (record) => {
-                  setEditingRecord(record);
-                  setShowRecordForm(true);
-                }
-          }
-          onDelete={budget.archived ? undefined : confirmDeleteRecord}
-          emptyMessage="No expenditures or refunds in this budget yet."
-        />
       </Section>
       <ModalFrame
         visible={showEditBudget}
@@ -175,19 +165,17 @@ export default function BudgetDetailScreen() {
       </ModalFrame>
       <ModalFrame
         visible={showRecordForm}
-        title={editingRecord ? 'Edit record' : 'Add budget activity'}
+        title="Add budget activity"
         description="Expenditures reduce the budget; refunds put money back."
         onClose={() => {
           setShowRecordForm(false);
-          setEditingRecord(undefined);
         }}>
         {errorMessage ? <StatusBanner tone="error" message={errorMessage} /> : null}
         <BudgetRecordForm
-          key={editingRecord?.id ?? 'new'}
+          key="new"
           budgets={snapshot?.budgets ?? []}
           categories={snapshot?.categories ?? []}
           lockedBudget={budget}
-          initialRecord={editingRecord}
           isSaving={isSaving}
           onSubmit={saveActivity}
         />
