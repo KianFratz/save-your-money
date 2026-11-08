@@ -29,7 +29,6 @@ jest.mock('@/features/budget/budget-data-provider', () => ({
     clearError: jest.fn(),
     create: jest.fn(),
     update: jest.fn(),
-    setAllocation: jest.fn(),
     archive: jest.fn(),
     restore: jest.fn(),
     removeEmpty: jest.fn(),

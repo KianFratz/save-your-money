@@ -184,60 +184,6 @@ export async function updateBudget(db: SQLiteDatabase, input: UpdateBudgetInput)
   );
 }
 
-export async function updateCategoryAllocation(
-  db: SQLiteDatabase,
-  budgetId: number,
-  categoryId: number,
-  allocatedCents: number,
-): Promise<void> {
-  if (!Number.isSafeInteger(allocatedCents) || allocatedCents < 0) {
-    throw new Error('Category allocation cannot be negative.');
-  }
-  const row = await db.getFirstAsync<{
-    group_key: BudgetGroupKey;
-    received_cents: number;
-    needs_percentage: number;
-    wants_percentage: number;
-    savings_percentage: number;
-  }>(
-    `SELECT bca.group_key_snapshot AS group_key, b.received_cents,
-      b.needs_percentage, b.wants_percentage, b.savings_percentage
-     FROM budget_category_allocations bca
-     JOIN budgets b ON b.id = bca.budget_id
-     WHERE bca.budget_id = ? AND bca.category_id = ?`,
-    budgetId,
-    categoryId,
-  );
-  if (!row) throw new Error('This category allocation no longer exists.');
-
-  const groupAllocation = allocateByLargestRemainder(
-    row.received_cents,
-    percentagesFrom({
-      needsPercentage: row.needs_percentage,
-      wantsPercentage: row.wants_percentage,
-      savingsPercentage: row.savings_percentage,
-    }),
-  )[row.group_key];
-  const otherTotal = await db.getFirstAsync<{ total: number }>(
-    `SELECT COALESCE(SUM(allocated_cents), 0) AS total
-     FROM budget_category_allocations
-     WHERE budget_id = ? AND group_key_snapshot = ? AND category_id != ?`,
-    budgetId,
-    row.group_key,
-    categoryId,
-  );
-  if ((otherTotal?.total ?? 0) + allocatedCents > groupAllocation) {
-    throw new Error('Category allocations cannot exceed their group allocation.');
-  }
-  await db.runAsync(
-    `UPDATE budget_category_allocations SET allocated_cents = ?
-     WHERE budget_id = ? AND category_id = ?`,
-    allocatedCents,
-    budgetId,
-    categoryId,
-  );
-}
-
 export async function setBudgetArchived(
   db: SQLiteDatabase,
   budgetId: number,

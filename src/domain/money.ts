@@ -5,10 +5,6 @@ export function parsePesoInput(value: string): number | null {
   return cents !== null && cents > 0 ? cents : null;
 }
 
-export function parseNonnegativePesoInput(value: string): number | null {
-  return parsePesoValue(value);
-}
-
 function parsePesoValue(value: string): number | null {
   const normalized = value.replaceAll(',', '').trim();
   if (!/^\d+(\.\d{0,2})?$/.test(normalized)) {

@@ -19,7 +19,6 @@ import {
   saveBudgetRecord,
   setBudgetArchived,
   updateBudget,
-  updateCategoryAllocation,
 } from '@/data/repositories/budget-repository';
 import type {
   BudgetGroupKey,
@@ -38,7 +37,6 @@ type BudgetDataContextValue = {
   clearError: () => void;
   create: (input: CreateBudgetInput) => Promise<number>;
   update: (input: UpdateBudgetInput) => Promise<void>;
-  setAllocation: (budgetId: number, categoryId: number, allocatedCents: number) => Promise<void>;
   archive: (budgetId: number) => Promise<void>;
   restore: (budgetId: number) => Promise<void>;
   removeEmpty: (budgetId: number) => Promise<void>;
@@ -124,8 +122,6 @@ export function BudgetDataProvider({ children }: PropsWithChildren) {
       clearError,
       create: (input) => execute(() => createBudget(database, input)),
       update: (input) => execute(() => updateBudget(database, input)),
-      setAllocation: (budgetId, categoryId, allocatedCents) =>
-        execute(() => updateCategoryAllocation(database, budgetId, categoryId, allocatedCents)),
       archive: (budgetId) => execute(() => setBudgetArchived(database, budgetId, true)),
       restore: (budgetId) => execute(() => setBudgetArchived(database, budgetId, false)),
       removeEmpty: (budgetId) => execute(() => deleteEmptyBudget(database, budgetId)),

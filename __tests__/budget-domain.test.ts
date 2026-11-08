@@ -7,7 +7,7 @@ import {
   isValidIsoDate,
   validateGroupPercentages,
 } from '@/domain/budget';
-import { formatPesoInput, parseNonnegativePesoInput, parsePesoInput } from '@/domain/money';
+import { formatPesoInput, parsePesoInput } from '@/domain/money';
 
 describe('budget money rules', () => {
   test('parses pesos into integer cents without floating-point math', () => {
@@ -15,7 +15,6 @@ describe('budget money rules', () => {
     expect(parsePesoInput('0.01')).toBe(1);
     expect(parsePesoInput('12.345')).toBeNull();
     expect(parsePesoInput('0')).toBeNull();
-    expect(parseNonnegativePesoInput('0')).toBe(0);
     expect(formatPesoInput(123450)).toBe('1234.50');
   });
 

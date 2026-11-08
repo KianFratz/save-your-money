@@ -208,7 +208,7 @@ Screens use a single scrolling column with a maximum content width of 800dp, 24d
 
 Flow rows, lane headers, chips, and summaries wrap instead of clipping. The same structure therefore serves narrow phones, larger Android windows, and increased font sizes. React Native text keeps platform font scaling enabled; do not fix text containers to single-line heights. Controls retain at least 48dp touch height, while fields use 52dp.
 
-The five labeled native destinations remain Home, Budget, Activity, Reports, and Settings. Home aggregates current Budgets; Budget owns creation, detail, and category allocation; Activity owns the complete ledger; Reports inspects one selected Budget; Settings manages categories.
+The five labeled native destinations remain Home, Budget, Activity, Reports, and Settings. Home aggregates current Budgets; Budget owns creation and detail; Activity owns the complete ledger; Reports inspects one selected Budget; Settings manages categories.
 
 ## Elevation & Depth
 
@@ -237,7 +237,7 @@ Choice chips form labeled radio groups. They wrap with 8dp gaps, retain a 48dp m
 
 ### Cards / Containers
 
-The signature Budget card shows cadence, date range, derived timing, received amount, spent amount, remaining amount, and a progress track. Detail screens add Needs, Wants, and Savings lanes with allocation, spending, remaining, unallocated category money, and explicit 80%/over-plan messages.
+The signature Budget card shows cadence, date range, derived timing, received amount, spent amount, remaining amount, and a progress track. Detail screens add Needs, Wants, and Savings lanes with group allocation, spending, remaining, read-only category spending, and explicit 80%/over-plan messages.
 
 ### Inputs / Fields
 

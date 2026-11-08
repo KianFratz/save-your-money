@@ -5,23 +5,15 @@ import { Alert, Pressable, StyleSheet, View } from 'react-native';
 import { ScreenFrame } from '@/components/screen-frame';
 import { StateMessage } from '@/components/state-message';
 import { ThemedText } from '@/components/themed-text';
-import { BUDGET_GROUP_LABELS } from '@/constants/budget';
 import { Spacing } from '@/constants/theme';
 import { todayIsoDate } from '@/domain/budget';
-import type {
-  BudgetRecord,
-  CategoryAllocation,
-  SaveBudgetRecordInput,
-  UpdateBudgetInput,
-} from '@/domain/budget-types';
-import { formatPesoInput, parseNonnegativePesoInput } from '@/domain/money';
+import type { BudgetRecord, SaveBudgetRecordInput, UpdateBudgetInput } from '@/domain/budget-types';
 import { EditBudgetForm } from '@/features/budget/budget-form';
 import { useBudgetData } from '@/features/budget/budget-data-provider';
 import { BudgetRecordForm } from '@/features/budget/budget-record-form';
 import {
   ActionButton,
   BudgetSummary,
-  FormField,
   GroupLane,
   ModalFrame,
   RecordList,
@@ -37,7 +29,6 @@ export default function BudgetDetailScreen() {
     isSaving,
     errorMessage,
     update,
-    setAllocation,
     archive,
     restore,
     removeEmpty,
@@ -156,23 +147,6 @@ export default function BudgetDetailScreen() {
         {budget.groups.map((group) => (
           <View key={group.groupKey} style={styles.groupBlock}>
             <GroupLane group={group} expanded />
-            {!budget.archived ? (
-              <View style={styles.groupBlock}>
-                <ThemedText type="label" themeColor="textSecondary">
-                  Edit {BUDGET_GROUP_LABELS[group.groupKey]} allocations
-                </ThemedText>
-                {group.categories.map((category) => (
-                  <AllocationEditor
-                    key={category.categoryId}
-                    category={category}
-                    isSaving={isSaving}
-                    onSave={(allocatedCents) =>
-                      setAllocation(budget.id, category.categoryId, allocatedCents)
-                    }
-                  />
-                ))}
-              </View>
-            ) : null}
           </View>
         ))}
       </Section>
@@ -222,40 +196,8 @@ export default function BudgetDetailScreen() {
   );
 }
 
-function AllocationEditor({
-  category,
-  isSaving,
-  onSave,
-}: {
-  category: CategoryAllocation;
-  isSaving: boolean;
-  onSave: (allocatedCents: number) => Promise<void>;
-}) {
-  const [value, setValue] = useState(formatPesoInput(category.allocatedCents));
-  const parsed = parseNonnegativePesoInput(value);
-  return (
-    <View style={styles.allocationEditor}>
-      <FormField
-        label={`${category.categoryName} allocation`}
-        value={value}
-        onChangeText={setValue}
-        keyboardType="decimal-pad"
-      />
-      <ActionButton
-        label="Save allocation"
-        tone="secondary"
-        disabled={isSaving || parsed === null}
-        onPress={() => {
-          if (parsed !== null) void onSave(parsed);
-        }}
-      />
-    </View>
-  );
-}
-
 const styles = StyleSheet.create({
   backButton: { minHeight: 48, justifyContent: 'center', alignSelf: 'flex-start' },
   actions: { flexDirection: 'row', flexWrap: 'wrap', gap: Spacing.two },
   groupBlock: { gap: Spacing.two },
-  allocationEditor: { gap: Spacing.two },
 });

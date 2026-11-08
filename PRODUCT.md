@@ -20,7 +20,7 @@ The product is a lightweight offline budget ledger, not an account tracker. It p
 
 ## Operating Context
 
-The app is used for quick manual entry on an Android phone. On payday, the user creates a Budget, confirms its date range and allocations, then records expenditures as they happen. The app remains fully useful offline.
+The app is used for quick manual entry on an Android phone. On payday, the user creates a Budget, confirms its date range and group percentages, then records expenditures as they happen. The app remains fully useful offline.
 
 ## Capabilities and Constraints
 
@@ -29,7 +29,7 @@ The app is used for quick manual entry on an Android phone. On payday, the user 
 - Biweekly Budgets cover 14 inclusive days from the selected start date.
 - Monthly Budgets run from the selected start date through the day before the matching date next month, clamped for shorter months.
 - Fixed Needs, Wants, and Savings groups with whole-number percentages totaling 100 percent.
-- Editable category allocations, visible unallocated amounts, and non-blocking overspending warnings.
+- Categories classify records without requiring their own budgets; group progress and non-blocking overspending warnings remain visible.
 - Expenditures, refunds, and periodless Savings withdrawals; no account or disbursement workflow.
 - Savings places such as GoTyme, MariBank, GCash, and Stocks are categories, not linked financial accounts.
 - Budget timing is derived as Upcoming, Current, or Past. Archiving hides a Budget without deleting its history.
