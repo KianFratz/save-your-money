@@ -479,7 +479,7 @@ function formatRecordDetails(record: BudgetRecord): string {
   return details.filter((detail): detail is string => detail !== null).join(' · ');
 }
 
-function TextAction({
+export function TextAction({
   label,
   onPress,
   danger,

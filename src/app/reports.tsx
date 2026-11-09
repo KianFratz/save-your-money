@@ -6,13 +6,8 @@ import { StateMessage } from '@/components/state-message';
 import { ARCHIVE_REPORT_OPTIONS } from '@/constants/budget';
 import { formatBudgetIdentity, groupBudgetRecords } from '@/domain/budget';
 import { useBudgetData, useClearBudgetErrorOnBlur } from '@/features/budget/budget-data-provider';
-import {
-  BudgetSummary,
-  ChoiceChips,
-  GroupLane,
-  Section,
-  StatusBanner,
-} from '@/features/budget/budget-ui';
+import { ChoiceChips, StatusBanner } from '@/features/budget/budget-ui';
+import { BudgetReport } from '@/features/reports/report-ui';
 
 export default function ReportsScreen() {
   const { snapshot, isLoading, errorMessage } = useBudgetData();
@@ -63,27 +58,20 @@ export default function ReportsScreen() {
             onChange={setSelectedBudgetId}
           />
           {selectedBudget ? (
-            <>
-              <BudgetSummary budget={selectedBudget} />
-              <Section title="Group performance">
-                {selectedBudget.groups.map((group) => (
-                  <GroupLane
-                    key={group.groupKey}
-                    group={group}
-                    records={recordsByGroup[group.groupKey]}
-                    onViewAll={() =>
-                      router.push({
-                        pathname: '/transactions',
-                        params: {
-                          budgetId: String(selectedBudget.id),
-                          group: group.groupKey,
-                        },
-                      })
-                    }
-                  />
-                ))}
-              </Section>
-            </>
+            <BudgetReport
+              key={selectedBudget.id}
+              budget={selectedBudget}
+              recordsByGroup={recordsByGroup}
+              onViewAll={(groupKey) =>
+                router.push({
+                  pathname: '/transactions',
+                  params: {
+                    budgetId: String(selectedBudget.id),
+                    group: groupKey,
+                  },
+                })
+              }
+            />
           ) : null}
         </>
       )}
