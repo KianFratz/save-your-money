@@ -43,6 +43,7 @@ export const STARTER_CATEGORIES: readonly CategorySeed[] = [
   { name: 'MariBank', groupKey: 'savings' },
   { name: 'GCash', groupKey: 'savings' },
   { name: 'Stocks', groupKey: 'savings' },
+  { name: 'Others', groupKey: 'wants' },
 ];
 
 export const WARNING_THRESHOLD = 0.8;
