@@ -17,9 +17,9 @@ import type {
   BudgetRecordType,
   BudgetSnapshot,
   Category,
-  CategoryAllocation,
   CreateBudgetInput,
   GroupSummary,
+  PeriodCategorySummary,
   SaveBudgetRecordInput,
   UpdateBudgetInput,
 } from '@/domain/budget-types';
@@ -47,12 +47,11 @@ type BudgetRow = {
   spent_cents: number;
 };
 
-type AllocationRow = {
+type CategorySnapshotRow = {
   budget_id: number;
   category_id: number;
   category_name_snapshot: string;
   group_key_snapshot: BudgetGroupKey;
-  allocated_cents: number;
   display_order: number;
   spent_cents: number;
 };
@@ -76,16 +75,16 @@ type RecordRow = {
 };
 
 export async function loadBudgetSnapshot(db: SQLiteDatabase): Promise<BudgetSnapshot> {
-  const [categoryRows, budgetRows, allocationRows, recordRows] = await Promise.all([
+  const [categoryRows, budgetRows, categorySnapshotRows, recordRows] = await Promise.all([
     db.getAllAsync<CategoryRow>(CATEGORIES_QUERY),
     db.getAllAsync<BudgetRow>(BUDGETS_QUERY),
-    db.getAllAsync<AllocationRow>(ALLOCATIONS_QUERY),
+    db.getAllAsync<CategorySnapshotRow>(CATEGORY_SNAPSHOTS_QUERY),
     db.getAllAsync<RecordRow>(RECORDS_QUERY),
   ]);
-  const allocationsByBudget = groupAllocationsByBudget(allocationRows);
+  const categorySnapshotsByBudget = groupCategorySnapshotsByBudget(categorySnapshotRows);
   return {
     categories: categoryRows.map(mapCategory),
-    budgets: budgetRows.map((row) => mapBudget(row, allocationsByBudget.get(row.id) ?? [])),
+    budgets: budgetRows.map((row) => mapBudget(row, categorySnapshotsByBudget.get(row.id) ?? [])),
     records: recordRows.map(mapRecord),
   };
 }
@@ -94,7 +93,6 @@ export async function createBudget(db: SQLiteDatabase, input: CreateBudgetInput)
   validateBudgetInput(input);
   const { startDate, endDate } = getBudgetBounds(input.cadence, input.startDate);
   const categories = await loadActiveCategoryRows(db);
-  const allocations = validateCategoryAllocations(input, categories);
   let budgetId = 0;
 
   await db.withTransactionAsync(async () => {
@@ -123,7 +121,7 @@ export async function createBudget(db: SQLiteDatabase, input: CreateBudgetInput)
         category.id,
         category.name,
         category.group_key,
-        allocations.get(category.id) ?? 0,
+        0,
         category.display_order,
       );
     }
@@ -133,7 +131,7 @@ export async function createBudget(db: SQLiteDatabase, input: CreateBudgetInput)
 }
 
 export async function updateBudget(db: SQLiteDatabase, input: UpdateBudgetInput): Promise<void> {
-  validateBudgetInput({ ...input, categoryAllocations: [] });
+  validateBudgetInput(input);
   const { startDate, endDate } = getBudgetBounds(input.cadence, input.startDate);
   const budget = await db.getFirstAsync<{ id: number }>(
     'SELECT id FROM budgets WHERE id = ?',
@@ -154,18 +152,6 @@ export async function updateBudget(db: SQLiteDatabase, input: UpdateBudgetInput)
     (recordDates?.last_date && recordDates.last_date > endDate)
   ) {
     throw new Error('The new dates would exclude an existing record.');
-  }
-
-  const groupAllocations = allocateByLargestRemainder(input.receivedCents, percentagesFrom(input));
-  const totals = await db.getAllAsync<{ group_key: BudgetGroupKey; total: number }>(
-    `SELECT group_key_snapshot AS group_key, SUM(allocated_cents) AS total
-     FROM budget_category_allocations WHERE budget_id = ? GROUP BY group_key_snapshot`,
-    input.budgetId,
-  );
-  for (const row of totals) {
-    if (row.total > groupAllocations[row.group_key]) {
-      throw new Error(`Reduce ${row.group_key} category allocations before changing this budget.`);
-    }
   }
 
   await db.runAsync(
@@ -276,9 +262,7 @@ export async function addCategory(
   );
 }
 
-function validateBudgetInput(
-  input: Omit<CreateBudgetInput, 'categoryAllocations'> & { categoryAllocations?: unknown },
-): void {
+function validateBudgetInput(input: CreateBudgetInput): void {
   if (!validateGroupPercentages(percentagesFrom(input))) {
     throw new Error('Needs, Wants, and Savings must total exactly 100%.');
   }
@@ -288,34 +272,6 @@ function validateBudgetInput(
   if (!isValidIsoDate(input.startDate)) {
     throw new Error('Enter a valid start date in YYYY-MM-DD format.');
   }
-}
-
-function validateCategoryAllocations(input: CreateBudgetInput, categories: CategoryRow[]) {
-  const allocationMap = new Map(
-    input.categoryAllocations.map((allocation) => [
-      allocation.categoryId,
-      allocation.allocatedCents,
-    ]),
-  );
-  for (const [categoryId, allocatedCents] of allocationMap) {
-    if (!categories.some((category) => category.id === categoryId)) {
-      throw new Error('A selected category is no longer available.');
-    }
-    if (!Number.isSafeInteger(allocatedCents) || allocatedCents < 0) {
-      throw new Error('Category allocations cannot be negative.');
-    }
-  }
-
-  const groupAllocations = allocateByLargestRemainder(input.receivedCents, percentagesFrom(input));
-  for (const groupKey of BUDGET_GROUPS) {
-    const allocated = categories
-      .filter((category) => category.group_key === groupKey)
-      .reduce((sum, category) => sum + (allocationMap.get(category.id) ?? 0), 0);
-    if (allocated > groupAllocations[groupKey]) {
-      throw new Error(`${groupKey} category allocations exceed the group allocation.`);
-    }
-  }
-  return allocationMap;
 }
 
 function validateRecordInput(input: SaveBudgetRecordInput): void {
@@ -363,13 +319,13 @@ async function validateRecordContext(
   if (input.effectiveDate < budget.start_date || input.effectiveDate > budget.end_date) {
     throw new Error(`Choose a date from ${budget.start_date} to ${budget.end_date}.`);
   }
-  const allocation = await db.getFirstAsync<{ category_id: number }>(
+  const categorySnapshot = await db.getFirstAsync<{ category_id: number }>(
     `SELECT category_id FROM budget_category_allocations
      WHERE budget_id = ? AND category_id = ?`,
     input.budgetId ?? -1,
     input.categoryId,
   );
-  if (!allocation) throw new Error('That category is not part of this budget.');
+  if (!categorySnapshot) throw new Error('That category is not part of this budget.');
 
   if (input.type === 'refund') {
     const spending = await db.getFirstAsync<{ net_spent: number }>(
@@ -448,8 +404,10 @@ function percentagesFrom(input: {
   };
 }
 
-function groupAllocationsByBudget(rows: AllocationRow[]): Map<number, AllocationRow[]> {
-  const grouped = new Map<number, AllocationRow[]>();
+function groupCategorySnapshotsByBudget(
+  rows: CategorySnapshotRow[],
+): Map<number, CategorySnapshotRow[]> {
+  const grouped = new Map<number, CategorySnapshotRow[]>();
   for (const row of rows) {
     const budgetRows = grouped.get(row.budget_id) ?? [];
     budgetRows.push(row);
@@ -458,7 +416,7 @@ function groupAllocationsByBudget(rows: AllocationRow[]): Map<number, Allocation
   return grouped;
 }
 
-function mapBudget(row: BudgetRow, allocationRows: AllocationRow[]): Budget {
+function mapBudget(row: BudgetRow, categorySnapshotRows: CategorySnapshotRow[]): Budget {
   const percentages = percentagesFrom({
     needsPercentage: row.needs_percentage,
     wantsPercentage: row.wants_percentage,
@@ -466,30 +424,22 @@ function mapBudget(row: BudgetRow, allocationRows: AllocationRow[]): Budget {
   });
   const groupAllocations = allocateByLargestRemainder(row.received_cents, percentages);
   const groups = BUDGET_GROUPS.map<GroupSummary>((groupKey) => {
-    const categories = allocationRows
-      .filter((allocation) => allocation.group_key_snapshot === groupKey)
-      .map<CategoryAllocation>((allocation) => ({
-        categoryId: allocation.category_id,
-        categoryName: allocation.category_name_snapshot,
+    const categories = categorySnapshotRows
+      .filter((snapshot) => snapshot.group_key_snapshot === groupKey)
+      .map<PeriodCategorySummary>((snapshot) => ({
+        categoryId: snapshot.category_id,
+        categoryName: snapshot.category_name_snapshot,
         groupKey,
-        allocatedCents: allocation.allocated_cents,
-        spentCents: allocation.spent_cents,
-        remainingCents: allocation.allocated_cents - allocation.spent_cents,
-        displayOrder: allocation.display_order,
+        spentCents: snapshot.spent_cents,
+        displayOrder: snapshot.display_order,
       }));
-    const categoryAllocatedCents = categories.reduce(
-      (sum, category) => sum + category.allocatedCents,
-      0,
-    );
     const spentCents = categories.reduce((sum, category) => sum + category.spentCents, 0);
     return {
       groupKey,
       percentage: percentages[groupKey],
       allocatedCents: groupAllocations[groupKey],
-      categoryAllocatedCents,
       spentCents,
       remainingCents: groupAllocations[groupKey] - spentCents,
-      unallocatedCents: groupAllocations[groupKey] - categoryAllocatedCents,
       categories,
     };
   });
@@ -568,9 +518,9 @@ const BUDGETS_QUERY = `
   GROUP BY b.id
   ORDER BY b.start_date DESC, b.id DESC`;
 
-const ALLOCATIONS_QUERY = `
+const CATEGORY_SNAPSHOTS_QUERY = `
   SELECT bca.budget_id, bca.category_id, bca.category_name_snapshot,
-    bca.group_key_snapshot, bca.allocated_cents, bca.display_order,
+    bca.group_key_snapshot, bca.display_order,
     COALESCE(SUM(CASE
       WHEN br.type = 'expenditure' THEN br.amount_cents
       WHEN br.type = 'refund' THEN -br.amount_cents

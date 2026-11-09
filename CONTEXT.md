@@ -60,14 +60,6 @@ _Avoid_: Income, received amount
 The category name and budget group retained by a budget period so later category changes cannot rewrite that period's meaning.
 _Avoid_: Monthly category snapshot, category version, category history
 
-**Category allocation**:
-An optional portion of a budget group's money assigned to one category for a specific budget period; a category can classify expenditures without having an allocation.
-_Avoid_: Category percentage, category balance
-
-**Unallocated amount**:
-The portion of a budget group's money not assigned to any category.
-_Avoid_: Remaining amount, unspent amount
-
 **Portable backup**:
 A user-created, passphrase-encrypted recovery artifact containing the complete state needed to restore Save Your Money independently of an installation or device.
 _Avoid_: Export, Android-managed backup

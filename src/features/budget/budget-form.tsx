@@ -57,7 +57,6 @@ export function NewBudgetForm({
       needsPercentage: parsed.percentages.needs,
       wantsPercentage: parsed.percentages.wants,
       savingsPercentage: parsed.percentages.savings,
-      categoryAllocations: [],
     });
   }
 

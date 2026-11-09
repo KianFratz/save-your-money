@@ -4,46 +4,54 @@ import { render, screen } from '@testing-library/react-native';
 import type { Budget, BudgetGroupKey, BudgetRecord, GroupSummary } from '@/domain/budget-types';
 import { BudgetReport } from '@/features/reports/report-ui';
 
-test('visualizes allocation, group spending, and categories without allocations', async () => {
+test('shows group plans and net category activity without category caps', async () => {
   const budget = createBudget({
     spentCents: 60000,
     remainingCents: 40000,
     groups: [
       createGroup('needs', {
-        spentCents: 60000,
-        remainingCents: -10000,
-        categoryAllocatedCents: 30000,
-        unallocatedCents: 20000,
+        spentCents: 55000,
+        remainingCents: -5000,
         categories: [
           {
             categoryId: 1,
             categoryName: 'Food',
             groupKey: 'needs',
-            allocatedCents: 30000,
-            spentCents: 35000,
-            remainingCents: -5000,
+            spentCents: 30000,
             displayOrder: 0,
           },
           {
             categoryId: 3,
             categoryName: 'Unused category',
             groupKey: 'needs',
-            allocatedCents: 0,
             spentCents: 0,
-            remainingCents: 0,
             displayOrder: 2,
           },
         ],
       }),
       createGroup('wants'),
-      createGroup('savings'),
+      createGroup('savings', {
+        spentCents: 5000,
+        remainingCents: 15000,
+        categories: [
+          {
+            categoryId: 4,
+            categoryName: 'GoTyme',
+            groupKey: 'savings',
+            spentCents: 5000,
+            displayOrder: 0,
+          },
+        ],
+      }),
     ],
   });
   const recordsByGroup = createRecordsByGroup({
     needs: [
       createRecord(1, 1, 'Food', 35000, 'Groceries'),
-      createRecord(2, 2, 'Fare', 25000, 'Commute'),
+      createRecord(2, 1, 'Food', 5000, 'Partial refund', { type: 'refund' }),
+      createRecord(3, 2, 'Fare', 25000, 'Commute'),
     ],
+    savings: [createRecord(4, 4, 'GoTyme', 5000, 'Payday transfer', { groupKey: 'savings' })],
   });
 
   await render(
@@ -57,16 +65,25 @@ test('visualizes allocation, group spending, and categories without allocations'
   ).toBeTruthy();
   expect(
     screen.getByRole('progressbar', {
-      name: 'Needs spending: ₱600.00 of ₱500.00',
+      name: 'Needs spending: ₱550.00 of ₱500.00',
     }),
   ).toBeTruthy();
-  expect(screen.getByText('₱100.00 over this group plan')).toBeTruthy();
-  expect(screen.getByText('₱50.00 over')).toBeTruthy();
+  expect(
+    screen.getByRole('progressbar', {
+      name: 'Savings saving: ₱50.00 of ₱200.00',
+    }),
+  ).toBeTruthy();
+  expect(screen.getByText('₱50.00 over this group plan')).toBeTruthy();
+  expect(screen.getByText('₱300.00 spent')).toBeTruthy();
+  expect(screen.getByText('₱250.00 spent')).toBeTruthy();
+  expect(screen.getByText('₱50.00 saved')).toBeTruthy();
   expect(screen.getByText('Fare')).toBeTruthy();
-  expect(screen.getByText('No allocation')).toBeTruthy();
+  expect(screen.getByText('GoTyme')).toBeTruthy();
+  expect(screen.queryByText('No allocation')).toBeNull();
   expect(screen.queryByText('Unused category')).toBeNull();
-  expect(screen.getAllByText('Unallocated')).toHaveLength(3);
-  expect(screen.getAllByText('Not assigned to a Category')).toHaveLength(3);
+  expect(screen.queryByText('Unallocated')).toBeNull();
+  expect(screen.queryByText('Not assigned to a Category')).toBeNull();
+  expect(screen.queryByRole('progressbar', { name: /Food/ })).toBeNull();
   expect(screen.getByText('Groceries')).toBeTruthy();
   expect(screen.getByText('Commute')).toBeTruthy();
 });
@@ -81,8 +98,9 @@ test('keeps the chart structure visible before spending starts', async () => {
   expect(
     screen.getByRole('progressbar', { name: 'Overall spending: ₱0.00 of ₱1,000.00' }),
   ).toBeTruthy();
-  expect(screen.getAllByText('No spending recorded yet.')).toHaveLength(4);
-  expect(screen.getAllByText('No Category allocations or spending yet.')).toHaveLength(3);
+  expect(screen.getAllByText('No spending recorded yet.')).toHaveLength(3);
+  expect(screen.getByText('No saving recorded yet.')).toBeTruthy();
+  expect(screen.getAllByText('No category activity yet.')).toHaveLength(3);
 });
 
 function createBudget(overrides: Partial<Budget> = {}): Budget {
@@ -115,10 +133,8 @@ function createGroup(
     groupKey,
     percentage,
     allocatedCents,
-    categoryAllocatedCents: 0,
     spentCents: 0,
     remainingCents: allocatedCents,
-    unallocatedCents: allocatedCents,
     categories: [],
     ...overrides,
   };
@@ -141,6 +157,7 @@ function createRecord(
   categoryName: string,
   amountCents: number,
   description: string,
+  overrides: Partial<Pick<BudgetRecord, 'groupKey' | 'type'>> = {},
 ): BudgetRecord {
   return {
     id,
@@ -158,5 +175,6 @@ function createRecord(
     budgetCadence: 'biweekly',
     budgetStartDate: '2026-11-01',
     budgetEndDate: '2026-11-14',
+    ...overrides,
   };
 }

@@ -237,7 +237,7 @@ Choice chips form labeled radio groups. They wrap with 8dp gaps, retain a 48dp m
 
 ### Cards / Containers
 
-The signature Budget card shows cadence, date range, derived timing, received amount, spent amount, remaining amount, and a progress track. Detail screens add Needs, Wants, and Savings lanes with group allocation, spending, remaining, unallocated money, the three newest group records, filtered full-activity links when more records exist, and explicit 80%/over-plan messages.
+The signature Budget card shows cadence, date range, derived timing, received amount, spent amount, remaining amount, and a progress track. Detail screens add Needs, Wants, and Savings lanes with group allocation, spending, remaining, the three newest group records, filtered full-activity links when more records exist, and explicit 80%/over-plan messages. Reports summarize net category activity without category-level budgets or caps.
 
 ### Inputs / Fields
 
@@ -263,7 +263,7 @@ Status banners use semantic containers plus concise text and a polite live regio
 
 - **Do** lead Budget screens with received, spent, and remaining before allocation detail.
 - **Do** preserve whole labels, wrapping, safe areas, screen-reader roles/states, polite live regions, and 48dp targets under Android font scaling.
-- **Do** show overspending, invalid dates, and unallocated money in factual language without blocking recorded reality.
+- **Do** show overspending and invalid dates in factual language without blocking recorded reality.
 - **Do** use native Android tabs, page sheets, alerts, keyboard behavior, and light/dark scheme selection.
 
 ### Don't:

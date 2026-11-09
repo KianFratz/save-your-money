@@ -17,13 +17,11 @@ export type Category = {
   savedBalanceCents: number;
 };
 
-export type CategoryAllocation = {
+export type PeriodCategorySummary = {
   categoryId: number;
   categoryName: string;
   groupKey: BudgetGroupKey;
-  allocatedCents: number;
   spentCents: number;
-  remainingCents: number;
   displayOrder: number;
 };
 
@@ -31,11 +29,9 @@ export type GroupSummary = {
   groupKey: BudgetGroupKey;
   percentage: number;
   allocatedCents: number;
-  categoryAllocatedCents: number;
   spentCents: number;
   remainingCents: number;
-  unallocatedCents: number;
-  categories: CategoryAllocation[];
+  categories: PeriodCategorySummary[];
 };
 
 export type Budget = {
@@ -79,11 +75,6 @@ export type BudgetSnapshot = {
   categories: Category[];
 };
 
-export type CategoryAllocationInput = {
-  categoryId: number;
-  allocatedCents: number;
-};
-
 export type CreateBudgetInput = {
   cadence: BudgetCadence;
   startDate: string;
@@ -91,10 +82,9 @@ export type CreateBudgetInput = {
   needsPercentage: number;
   wantsPercentage: number;
   savingsPercentage: number;
-  categoryAllocations: CategoryAllocationInput[];
 };
 
-export type UpdateBudgetInput = Omit<CreateBudgetInput, 'categoryAllocations'> & {
+export type UpdateBudgetInput = CreateBudgetInput & {
   budgetId: number;
 };
 

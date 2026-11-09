@@ -19,7 +19,6 @@ test('creates a budget without assigning money to individual categories', async 
         needsPercentage: 50,
         wantsPercentage: 30,
         savingsPercentage: 20,
-        categoryAllocations: [],
       }),
     ),
   );
@@ -32,27 +31,21 @@ test('shows the three newest group records instead of category allocation rows',
     groupKey: 'needs',
     percentage: 50,
     allocatedCents: 100000,
-    categoryAllocatedCents: 0,
     spentCents: 50000,
     remainingCents: 50000,
-    unallocatedCents: 100000,
     categories: [
       {
         categoryId: 1,
         categoryName: 'Food',
         groupKey: 'needs',
-        allocatedCents: 0,
         spentCents: 50000,
-        remainingCents: -50000,
         displayOrder: 0,
       },
       {
         categoryId: 2,
         categoryName: 'Fare',
         groupKey: 'needs',
-        allocatedCents: 0,
         spentCents: 0,
-        remainingCents: 0,
         displayOrder: 1,
       },
     ],
@@ -71,6 +64,7 @@ test('shows the three newest group records instead of category allocation rows',
   expect(screen.getByText('Refund · Food · 2026-11-06')).toBeTruthy();
   expect(screen.queryByText('Oldest expense')).toBeNull();
   expect(screen.queryByText('₱500.00 spent · No budget set')).toBeNull();
+  expect(screen.queryByText(/not assigned to a category/i)).toBeNull();
 
   await fireEvent.press(screen.getByRole('button', { name: 'View all Needs activity' }));
   expect(onViewAll).toHaveBeenCalledTimes(1);
@@ -81,10 +75,8 @@ test('explains an empty group without offering a redundant view-all action', asy
     groupKey: 'wants',
     percentage: 30,
     allocatedCents: 30000,
-    categoryAllocatedCents: 0,
     spentCents: 0,
     remainingCents: 30000,
-    unallocatedCents: 30000,
     categories: [],
   };
 
@@ -99,10 +91,8 @@ test('labels Savings expenditures as saved money', async () => {
     groupKey: 'savings',
     percentage: 20,
     allocatedCents: 20000,
-    categoryAllocatedCents: 0,
     spentCents: 1000,
     remainingCents: 19000,
-    unallocatedCents: 20000,
     categories: [],
   };
   const record = createRecord(1, 'Payday transfer', 'GoTyme', '2026-11-08', 'savings');

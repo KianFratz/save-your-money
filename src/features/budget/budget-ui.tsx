@@ -381,11 +381,6 @@ export function GroupLane({
           {ratio > 1 ? 'Over this group plan' : '80% of this group is already spent'}
         </ThemedText>
       ) : null}
-      {group.unallocatedCents > 0 ? (
-        <ThemedText type="small" themeColor="textSecondary">
-          {formatPeso(group.unallocatedCents)} not assigned to a category
-        </ThemedText>
-      ) : null}
       <View style={styles.groupActivity}>
         <ThemedText type="label" themeColor="textSecondary">
           Recent activity

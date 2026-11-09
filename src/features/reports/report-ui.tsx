@@ -15,8 +15,8 @@ import type {
   Budget,
   BudgetGroupKey,
   BudgetRecord,
-  CategoryAllocation,
   GroupSummary,
+  PeriodCategorySummary,
 } from '@/domain/budget-types';
 import { formatPeso } from '@/domain/money';
 import { RecordList, Section, TextAction } from '@/features/budget/budget-ui';
@@ -234,6 +234,8 @@ function ReportGroup({
   const theme = useTheme();
   const groupColor = theme[group.groupKey as ThemeColor];
   const groupLabel = BUDGET_GROUP_LABELS[group.groupKey];
+  const activityVerb = group.groupKey === 'savings' ? 'saved' : 'spent';
+  const activityNoun = group.groupKey === 'savings' ? 'saving' : 'spending';
   const overspentCents = Math.max(group.spentCents - group.allocatedCents, 0);
   const categoryRows = useMemo(() => getReportCategories(group, records), [group, records]);
   const previewRecords = records.slice(0, GROUP_ACTIVITY_PREVIEW_LIMIT);
@@ -265,14 +267,14 @@ function ReportGroup({
       <View style={styles.progressBlock}>
         <View style={styles.progressHeading}>
           <ThemedText type="smallBold">
-            {formatPeso(group.spentCents)} of {formatPeso(group.allocatedCents)} spent
+            {formatPeso(group.spentCents)} of {formatPeso(group.allocatedCents)} {activityVerb}
           </ThemedText>
           <ThemedText type="small" themeColor="textSecondary">
             {formatProgressPercent(group.spentCents, group.allocatedCents)}
           </ThemedText>
         </View>
         <ProgressBar
-          label={`${groupLabel} spending: ${formatPeso(group.spentCents)} of ${formatPeso(group.allocatedCents)}`}
+          label={`${groupLabel} ${activityNoun}: ${formatPeso(group.spentCents)} of ${formatPeso(group.allocatedCents)}`}
           ratio={getProgressRatio(group.spentCents, group.allocatedCents)}
           color={overspentCents > 0 ? theme.error : groupColor}
         />
@@ -282,11 +284,11 @@ function ReportGroup({
           </ThemedText>
         ) : getProgressRatio(group.spentCents, group.allocatedCents) >= WARNING_THRESHOLD ? (
           <ThemedText type="smallBold" themeColor="textSecondary">
-            80% of this group is already spent
+            80% of this group is already {activityVerb}
           </ThemedText>
         ) : records.length === 0 ? (
           <ThemedText type="small" themeColor="textSecondary">
-            No spending recorded yet.
+            No {activityNoun} recorded yet.
           </ThemedText>
         ) : null}
       </View>
@@ -297,24 +299,17 @@ function ReportGroup({
         </ThemedText>
         {categoryRows.length > 0 ? (
           categoryRows.map((category) => (
-            <CategoryProgress key={category.categoryId} category={category} color={groupColor} />
+            <CategoryActivity
+              key={category.categoryId}
+              category={category}
+              activityVerb={activityVerb}
+            />
           ))
         ) : (
           <ThemedText type="small" themeColor="textSecondary">
-            No Category allocations or spending yet.
+            No category activity yet.
           </ThemedText>
         )}
-        {group.unallocatedCents > 0 ? (
-          <View style={[styles.unallocatedRow, { borderColor: theme.outlineVariant }]}>
-            <View style={styles.unallocatedCopy}>
-              <ThemedText type="smallBold">Unallocated</ThemedText>
-              <ThemedText type="small" themeColor="textSecondary">
-                Not assigned to a Category
-              </ThemedText>
-            </View>
-            <ThemedText type="smallBold">{formatPeso(group.unallocatedCents)}</ThemedText>
-          </View>
-        ) : null}
       </View>
 
       <View style={styles.activity}>
@@ -334,56 +329,26 @@ function ReportGroup({
   );
 }
 
-function CategoryProgress({ category, color }: { category: CategoryAllocation; color: string }) {
-  const theme = useTheme();
-  const hasAllocation = category.allocatedCents > 0;
-  const overspentCents = Math.max(category.spentCents - category.allocatedCents, 0);
-
+function CategoryActivity({
+  category,
+  activityVerb,
+}: {
+  category: PeriodCategorySummary;
+  activityVerb: 'saved' | 'spent';
+}) {
   return (
     <View style={styles.categoryRow}>
-      <View style={styles.categoryHeading}>
-        <View style={styles.categoryName}>
-          <ThemedText type="smallBold">{category.categoryName}</ThemedText>
-          {!hasAllocation ? (
-            <ThemedText type="small" themeColor="textSecondary">
-              No allocation
-            </ThemedText>
-          ) : null}
-        </View>
-        <ThemedText type="smallBold">
-          {hasAllocation
-            ? `${formatPeso(category.spentCents)} / ${formatPeso(category.allocatedCents)}`
-            : `${formatPeso(category.spentCents)} spent`}
-        </ThemedText>
-      </View>
-      {hasAllocation ? (
-        <ProgressBar
-          label={`${category.categoryName}: ${formatPeso(category.spentCents)} of ${formatPeso(category.allocatedCents)}`}
-          ratio={getProgressRatio(category.spentCents, category.allocatedCents)}
-          color={overspentCents > 0 ? theme.error : color}
-          compact
-        />
-      ) : null}
-      {overspentCents > 0 ? (
-        <ThemedText type="smallBold" themeColor="error">
-          {formatPeso(overspentCents)} over
-        </ThemedText>
-      ) : null}
+      <ThemedText type="smallBold" style={styles.categoryName}>
+        {category.categoryName}
+      </ThemedText>
+      <ThemedText type="smallBold">
+        {formatPeso(category.spentCents)} {activityVerb}
+      </ThemedText>
     </View>
   );
 }
 
-function ProgressBar({
-  label,
-  ratio,
-  color,
-  compact = false,
-}: {
-  label: string;
-  ratio: number;
-  color: string;
-  compact?: boolean;
-}) {
+function ProgressBar({ label, ratio, color }: { label: string; ratio: number; color: string }) {
   const theme = useTheme();
   const progressPercent = Math.round(Math.min(Math.max(ratio, 0), 1) * 100);
 
@@ -398,11 +363,7 @@ function ProgressBar({
         now: progressPercent,
         text: `${Math.max(Math.round(ratio * 100), 0)}%`,
       }}
-      style={[
-        styles.track,
-        compact && styles.compactTrack,
-        { backgroundColor: theme.outlineVariant },
-      ]}>
+      style={[styles.track, { backgroundColor: theme.outlineVariant }]}>
       <View style={[styles.trackFill, { width: `${progressPercent}%`, backgroundColor: color }]} />
     </View>
   );
@@ -411,12 +372,12 @@ function ProgressBar({
 function getReportCategories(
   group: GroupSummary,
   records: readonly BudgetRecord[],
-): CategoryAllocation[] {
+): PeriodCategorySummary[] {
   const spendingByCategory = new Map<
     number,
     { categoryId: number; categoryName: string; spentCents: number }
   >();
-  const categories = new Map<number, CategoryAllocation>();
+  const categories = new Map<number, PeriodCategorySummary>();
 
   for (const record of records) {
     const existing = spendingByCategory.get(record.categoryId);
@@ -434,11 +395,7 @@ function getReportCategories(
   }
 
   for (const category of group.categories) {
-    if (
-      category.allocatedCents === 0 &&
-      category.spentCents === 0 &&
-      !spendingByCategory.has(category.categoryId)
-    ) {
+    if (category.spentCents === 0 && !spendingByCategory.has(category.categoryId)) {
       continue;
     }
     categories.set(category.categoryId, category);
@@ -450,9 +407,7 @@ function getReportCategories(
       categoryId: categorySpending.categoryId,
       categoryName: categorySpending.categoryName,
       groupKey: group.groupKey,
-      allocatedCents: 0,
       spentCents: categorySpending.spentCents,
-      remainingCents: -categorySpending.spentCents,
       displayOrder: Number.MAX_SAFE_INTEGER,
     });
   }
@@ -579,7 +534,6 @@ const styles = StyleSheet.create({
     gap: Spacing.two,
   },
   track: { height: 12, borderRadius: 4, overflow: 'hidden' },
-  compactTrack: { height: 8 },
   trackFill: { height: '100%', borderRadius: 4 },
   groupSection: {
     gap: Spacing.three,
@@ -597,27 +551,14 @@ const styles = StyleSheet.create({
   groupTitle: { flex: 1, gap: Spacing.half },
   groupRemaining: { alignItems: 'flex-end' },
   categoryBreakdown: { gap: Spacing.three },
-  categoryRow: { gap: Spacing.two },
-  categoryHeading: {
+  categoryRow: {
+    minHeight: 28,
     flexDirection: 'row',
     flexWrap: 'wrap',
-    alignItems: 'flex-start',
+    alignItems: 'baseline',
     justifyContent: 'space-between',
     gap: Spacing.two,
   },
-  categoryName: { flex: 1, minWidth: 140, gap: Spacing.half },
-  unallocatedRow: {
-    minHeight: 56,
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    gap: Spacing.two,
-    borderWidth: StyleSheet.hairlineWidth,
-    borderRadius: 12,
-    paddingHorizontal: Spacing.three,
-    paddingVertical: Spacing.two,
-  },
-  unallocatedCopy: { flex: 1, minWidth: 180, gap: Spacing.half },
+  categoryName: { flex: 1, minWidth: 140 },
   activity: { gap: Spacing.one, paddingTop: Spacing.one },
 });
