@@ -4,9 +4,10 @@ import { useMemo, useState } from 'react';
 import { ScreenFrame } from '@/components/screen-frame';
 import { StateMessage } from '@/components/state-message';
 import { ARCHIVE_REPORT_OPTIONS } from '@/constants/budget';
-import { formatBudgetIdentity, groupBudgetRecords } from '@/domain/budget';
+import { groupBudgetRecords } from '@/domain/budget';
 import { useBudgetData, useClearBudgetErrorOnBlur } from '@/features/budget/budget-data-provider';
 import { ChoiceChips, StatusBanner } from '@/features/budget/budget-ui';
+import { ReportBudgetSelector } from '@/features/reports/report-budget-selector';
 import { BudgetReport } from '@/features/reports/report-ui';
 
 export default function ReportsScreen() {
@@ -46,35 +47,29 @@ export default function ReportsScreen() {
           title="No report yet"
           message="Create a budget and add activity to see its report."
         />
-      ) : (
+      ) : selectedBudget ? (
         <>
-          <ChoiceChips
-            label="Budget"
-            options={budgets.map((budget) => ({
-              value: budget.id,
-              label: formatBudgetIdentity(budget.cadence, budget.startDate, budget.endDate),
-            }))}
-            value={selectedBudget?.id ?? null}
-            onChange={setSelectedBudgetId}
+          <ReportBudgetSelector
+            budgets={budgets}
+            selectedBudgetId={selectedBudget.id}
+            onSelectBudget={setSelectedBudgetId}
           />
-          {selectedBudget ? (
-            <BudgetReport
-              key={selectedBudget.id}
-              budget={selectedBudget}
-              recordsByGroup={recordsByGroup}
-              onViewAll={(groupKey) =>
-                router.push({
-                  pathname: '/transactions',
-                  params: {
-                    budgetId: String(selectedBudget.id),
-                    group: groupKey,
-                  },
-                })
-              }
-            />
-          ) : null}
+          <BudgetReport
+            key={selectedBudget.id}
+            budget={selectedBudget}
+            recordsByGroup={recordsByGroup}
+            onViewAll={(groupKey) =>
+              router.push({
+                pathname: '/transactions',
+                params: {
+                  budgetId: String(selectedBudget.id),
+                  group: groupKey,
+                },
+              })
+            }
+          />
         </>
-      )}
+      ) : null}
     </ScreenFrame>
   );
 }

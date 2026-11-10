@@ -32,7 +32,7 @@ export const BUDGET_GROUP_FILTER_OPTIONS: readonly {
 
 export const GROUP_ACTIVITY_PREVIEW_LIMIT = 3;
 
-export const PAST_BUDGET_PREVIEW_LIMIT = 2;
+export const BUDGET_LIST_PREVIEW_LIMIT = 2;
 
 export const STARTER_CATEGORIES: readonly CategorySeed[] = [
   { name: 'Fare', groupKey: 'needs' },
@@ -55,7 +55,7 @@ export const CADENCE_OPTIONS: readonly { value: BudgetCadence; label: string }[]
   { value: 'monthly', label: 'Monthly' },
 ];
 
-export const PAST_BUDGET_CADENCE_FILTER_OPTIONS: readonly {
+export const BUDGET_CADENCE_FILTER_OPTIONS: readonly {
   value: BudgetCadence | 'all';
   label: string;
 }[] = [{ value: 'all', label: 'All' }, ...CADENCE_OPTIONS];
