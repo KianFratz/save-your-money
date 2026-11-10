@@ -7,6 +7,7 @@ import { BUDGET_ARCHIVE_VIEW_OPTIONS, BUDGET_TIMING_LABELS } from '@/constants/b
 import type { BudgetTiming, CreateBudgetInput } from '@/domain/budget-types';
 import { NewBudgetForm } from '@/features/budget/budget-form';
 import { useBudgetData, useClearBudgetErrorOnBlur } from '@/features/budget/budget-data-provider';
+import { PastBudgetsSection } from '@/features/budget/past-budgets-section';
 import {
   ActionButton,
   BudgetCard,
@@ -83,20 +84,28 @@ export default function BudgetScreen() {
           ))}
         </Section>
       ) : (
-        (['current', 'upcoming', 'past'] as const).map((timing: BudgetTiming) => {
-          const group = budgets.filter((budget) => budget.timing === timing);
-          return group.length > 0 ? (
-            <Section key={timing} title={BUDGET_TIMING_LABELS[timing]}>
-              {group.map((budget) => (
-                <BudgetCard
-                  key={budget.id}
-                  budget={budget}
-                  onPress={() => router.push(`/budget/${budget.id}`)}
-                />
-              ))}
-            </Section>
-          ) : null;
-        })
+        <>
+          {(['current', 'upcoming'] as const).map((timing: BudgetTiming) => {
+            const group = budgets.filter((budget) => budget.timing === timing);
+            return group.length > 0 ? (
+              <Section key={timing} title={BUDGET_TIMING_LABELS[timing]}>
+                {group.map((budget) => (
+                  <BudgetCard
+                    key={budget.id}
+                    budget={budget}
+                    onPress={() => router.push(`/budget/${budget.id}`)}
+                  />
+                ))}
+              </Section>
+            ) : null;
+          })}
+          {budgets.some((budget) => budget.timing === 'past') ? (
+            <PastBudgetsSection
+              budgets={budgets.filter((budget) => budget.timing === 'past')}
+              onOpenBudget={(budgetId) => router.push(`/budget/${budgetId}`)}
+            />
+          ) : null}
+        </>
       )}
       <ModalFrame
         visible={showCreate}
